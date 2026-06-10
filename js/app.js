@@ -198,42 +198,35 @@ async function handleBarcode(code, mode) {
   }
 }
 
-// Camera barcode scanner (BarcodeDetector) with manual-entry fallback.
+// Camera barcode scanner using the bundled ZXing library (works in Safari/iOS,
+// Chrome, etc.). Falls back to manual barcode entry if the camera is unavailable.
 async function openScanModal(mode) {
-  const supported = ('BarcodeDetector' in window) && navigator.mediaDevices?.getUserMedia;
+  const canScan = !!(window.ZXing && navigator.mediaDevices?.getUserMedia && window.isSecureContext);
   const body = openModal('Scan barcode', `
-    ${supported
-      ? `<video id="scan-vid" playsinline muted style="width:100%;border-radius:12px;background:#000;aspect-ratio:4/3;object-fit:cover"></video>
+    ${canScan
+      ? `<video id="scan-vid" playsinline muted style="width:100%;border-radius:12px;background:#000;aspect-ratio:3/4;object-fit:cover"></video>
          <p class="tiny muted" id="scan-status" style="text-align:center">Point the camera at a barcode…</p>`
-      : `<p class="muted tiny">Live scanning isn’t available in this browser (it needs a recent Chrome/Edge and an HTTPS page). Type the barcode number below instead.</p>`}
+      : `<p class="muted tiny">Camera scanning needs an HTTPS page with camera permission. Type the barcode number below instead.</p>`}
     <div class="field"><label>Barcode number</label><input id="scan-manual" inputmode="numeric" placeholder="e.g. 5000119410436" /></div>
     <button class="btn btn-primary btn-block" id="scan-lookup">Look up</button>`);
 
   const finish = (code) => { closeModal(); handleBarcode(code, mode); };
   $('#scan-lookup', body).onclick = () => finish($('#scan-manual', body).value);
 
-  if (!supported) { setTimeout(() => $('#scan-manual', body).focus(), 50); return; }
+  if (!canScan) { setTimeout(() => $('#scan-manual', body).focus(), 50); return; }
 
-  let stream = null, active = true;
-  _modalCleanup = () => { active = false; if (stream) stream.getTracks().forEach(t => t.stop()); };
+  const reader = new ZXing.BrowserMultiFormatReader();
+  let done = false;
+  _modalCleanup = () => { try { reader.reset(); } catch (e) {} };
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    const vid = $('#scan-vid', body);
-    vid.srcObject = stream;
-    await vid.play();
-    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] });
-    const tick = async () => {
-      if (!active) return;
-      try {
-        const codes = await detector.detect(vid);
-        if (codes.length) { active = false; finish(codes[0].rawValue); return; }
-      } catch (e) { /* transient detect error, keep trying */ }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
+    await reader.decodeFromConstraints(
+      { video: { facingMode: { ideal: 'environment' } } },
+      $('#scan-vid', body),
+      (result) => { if (result && !done) { done = true; finish(result.getText()); } }
+    );
   } catch (e) {
     const s = $('#scan-status', body);
-    if (s) s.textContent = 'Camera unavailable — type the barcode below. (' + e.message + ')';
+    if (s) s.textContent = 'Camera unavailable — type the barcode below. (' + (e?.message || e) + ')';
   }
 }
 
