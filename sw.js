@@ -1,5 +1,5 @@
 // sw.js — caches the app shell so it works offline once loaded.
-const CACHE = 'calorie-tracker-v9';
+const CACHE = 'calorie-tracker-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,8 @@ const ASSETS = [
   './js/off.js',
   './js/zxing.js',
   './icons/icon.svg',
+  './icons/apple-icon-192.png',
+  './icons/apple-icon-512.png',
 ];
 
 self.addEventListener('install', (e) => {
