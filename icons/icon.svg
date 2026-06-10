@@ -1,16 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="112" fill="#2e7d32"/>
-  <!-- steam -->
-  <g fill="none" stroke="#f6f8f4" stroke-width="14" stroke-linecap="round">
-    <path d="M190 256 q-15 -29 0 -58 q15 -29 0 -57"/>
-    <path d="M256 256 q15 -29 0 -58 q-15 -29 0 -57"/>
-    <path d="M322 256 q-15 -29 0 -58 q15 -29 0 -57"/>
-  </g>
-  <!-- pot -->
+  <!-- apple body: three overlapping circles (two top lobes + body) -->
   <g fill="#f6f8f4">
-    <rect x="79" y="308" width="56" height="40" rx="16"/>
-    <rect x="377" y="308" width="56" height="40" rx="16"/>
-    <rect x="97" y="274" width="318" height="32" rx="16"/>
-    <path d="M122 300 a134 122 0 0 0 268 0 z"/>
+    <circle cx="205" cy="256" r="92"/>
+    <circle cx="307" cy="256" r="92"/>
+    <circle cx="256" cy="297" r="118"/>
   </g>
+  <!-- tick -->
+  <path d="M210 282 L243 320 L322 236" fill="none" stroke="#2e7d32"
+        stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- leaf + stalk -->
+  <ellipse cx="294" cy="136" rx="46" ry="20" fill="#9ccc65" transform="rotate(-35 294 136)"/>
+  <line x1="256" y1="182" x2="266" y2="141" stroke="#5d4037" stroke-width="13" stroke-linecap="round"/>
 </svg>
