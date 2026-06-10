@@ -1,13 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="112" fill="#2e7d32"/>
-  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
-    <!-- apple body -->
-    <path d="M256 168c-40-44-150-30-150 70 0 86 70 150 150 150s150-64 150-150c0-100-110-114-150-70z" fill="#ffffff" stroke="none"/>
-    <!-- leaf -->
-    <path d="M256 168c4-34 30-58 64-60-2 34-26 58-64 60z" fill="#9ccc65" stroke="none"/>
-    <!-- stalk -->
-    <path d="M256 168c0-22-2-40-12-58" stroke="#5d4037" stroke-width="18"/>
-    <!-- flame/check accent -->
-    <path d="M205 300l34 34 70-74" stroke="#2e7d32" stroke-width="30"/>
+  <!-- steam -->
+  <g fill="none" stroke="#f6f8f4" stroke-width="14" stroke-linecap="round">
+    <path d="M190 256 q-15 -29 0 -58 q15 -29 0 -57"/>
+    <path d="M256 256 q15 -29 0 -58 q-15 -29 0 -57"/>
+    <path d="M322 256 q-15 -29 0 -58 q15 -29 0 -57"/>
+  </g>
+  <!-- pot -->
+  <g fill="#f6f8f4">
+    <rect x="79" y="308" width="56" height="40" rx="16"/>
+    <rect x="377" y="308" width="56" height="40" rx="16"/>
+    <rect x="97" y="274" width="318" height="32" rx="16"/>
+    <path d="M122 300 a134 122 0 0 0 268 0 z"/>
   </g>
 </svg>
