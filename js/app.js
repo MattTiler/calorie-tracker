@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v15';
+const APP_VERSION = 'v16';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -777,14 +777,16 @@ function computeLogStats(log) {
   const totalKcal = dates.reduce((a, d) => a + byDate[d], 0);
   const daysWithData = dates.length;
   const spanDays = Math.round((parseISO(dates[dates.length - 1]) - parseISO(dates[0])) / 86400000) + 1;
-  let biggestDay = null, topFood = null;
+  let biggestDay = null;
   for (const d of dates) if (!biggestDay || byDate[d] > biggestDay.kcal) biggestDay = { date: d, kcal: byDate[d] };
-  for (const [name, count] of Object.entries(foodCounts)) if (!topFood || count > topFood.count) topFood = { name, count };
+  const topFoods = Object.entries(foodCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
   return {
     totalKcal,
-    avgPerDay: totalKcal / spanDays,
     avgPerLoggedDay: totalKcal / daysWithData,
-    daysWithData, spanDays, biggestDay, biggestItem, topFood,
+    daysWithData, spanDays, biggestDay, biggestItem, topFoods,
   };
 }
 
@@ -795,9 +797,8 @@ async function renderSettings() {
   const kcal = (n) => round(n).toLocaleString();
   const statsRows = stats ? `
       <div class="stat-row"><span>Calories logged all-time</span><strong>${kcal(stats.totalKcal)}</strong></div>
-      <div class="stat-row"><span>Average per day <span class="tiny muted">incl. empty days</span></span><strong>${kcal(stats.avgPerDay)}</strong></div>
       <div class="stat-row"><span>Average per logged day</span><strong>${kcal(stats.avgPerLoggedDay)}</strong></div>
-      <div class="stat-row"><span>Most-logged food</span><strong>${stats.topFood ? `${esc(stats.topFood.name)} ×${stats.topFood.count}` : '—'}</strong></div>
+      ${stats.topFoods.map((f, i) => `<div class="stat-row"><span>${i === 0 ? 'Most-logged foods' : ''} <span class="tiny muted">#${i + 1}</span></span><strong>${esc(f.name)} ×${f.count}</strong></div>`).join('')}
       <div class="stat-row"><span>Biggest day</span><strong>${kcal(stats.biggestDay.kcal)} · ${prettyDate(stats.biggestDay.date)}</strong></div>
       <div class="stat-row"><span>Biggest single item</span><strong>${esc(stats.biggestItem.name)} · ${kcal(stats.biggestItem.kcal)}</strong></div>
       <div class="stat-row"><span>Days logged</span><strong>${stats.daysWithData} of ${stats.spanDays}</strong></div>`
