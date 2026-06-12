@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v14';
+const APP_VERSION = 'v15';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -759,9 +759,49 @@ async function renderTrends() {
 }
 
 // ================================================================ SETTINGS
-function renderSettings() {
+// Aggregate the whole log into the figures shown in Settings → Stats.
+// Returns null when nothing has been logged yet.
+function computeLogStats(log) {
+  if (!log.length) return null;
+  const byDate = {};
+  const foodCounts = {};
+  let biggestItem = null;
+  for (const e of log) {
+    const k = e.kcal || 0;
+    byDate[e.date] = (byDate[e.date] || 0) + k;
+    const name = (e.name || 'Unknown').trim();
+    foodCounts[name] = (foodCounts[name] || 0) + 1;
+    if (!biggestItem || k > biggestItem.kcal) biggestItem = { name, kcal: k };
+  }
+  const dates = Object.keys(byDate).sort();
+  const totalKcal = dates.reduce((a, d) => a + byDate[d], 0);
+  const daysWithData = dates.length;
+  const spanDays = Math.round((parseISO(dates[dates.length - 1]) - parseISO(dates[0])) / 86400000) + 1;
+  let biggestDay = null, topFood = null;
+  for (const d of dates) if (!biggestDay || byDate[d] > biggestDay.kcal) biggestDay = { date: d, kcal: byDate[d] };
+  for (const [name, count] of Object.entries(foodCounts)) if (!topFood || count > topFood.count) topFood = { name, count };
+  return {
+    totalKcal,
+    avgPerDay: totalKcal / spanDays,
+    avgPerLoggedDay: totalKcal / daysWithData,
+    daysWithData, spanDays, biggestDay, biggestItem, topFood,
+  };
+}
+
+async function renderSettings() {
   const g = state.goals;
   const view = $('#view');
+  const stats = computeLogStats(await DB.getAll('log'));
+  const kcal = (n) => round(n).toLocaleString();
+  const statsRows = stats ? `
+      <div class="stat-row"><span>Calories logged all-time</span><strong>${kcal(stats.totalKcal)}</strong></div>
+      <div class="stat-row"><span>Average per day <span class="tiny muted">incl. empty days</span></span><strong>${kcal(stats.avgPerDay)}</strong></div>
+      <div class="stat-row"><span>Average per logged day</span><strong>${kcal(stats.avgPerLoggedDay)}</strong></div>
+      <div class="stat-row"><span>Most-logged food</span><strong>${stats.topFood ? `${esc(stats.topFood.name)} ×${stats.topFood.count}` : '—'}</strong></div>
+      <div class="stat-row"><span>Biggest day</span><strong>${kcal(stats.biggestDay.kcal)} · ${prettyDate(stats.biggestDay.date)}</strong></div>
+      <div class="stat-row"><span>Biggest single item</span><strong>${esc(stats.biggestItem.name)} · ${kcal(stats.biggestItem.kcal)}</strong></div>
+      <div class="stat-row"><span>Days logged</span><strong>${stats.daysWithData} of ${stats.spanDays}</strong></div>`
+    : `<div class="tiny muted">No food logged yet — your stats will appear here.</div>`;
   view.innerHTML = `
     <div class="card">
       <h3>Daily goals</h3>
@@ -786,7 +826,8 @@ function renderSettings() {
 
     <div class="card">
       <h3>Stats</h3>
-      <div class="tiny muted">${state.foods.length} foods · ${state.meals.length} meals saved</div>
+      ${statsRows}
+      <div class="tiny muted" style="margin-top:10px">${state.foods.length} foods · ${state.meals.length} meals saved</div>
     </div>
 
     <p class="tiny muted" style="text-align:center">Calorie Tracker · ${APP_VERSION}<br>

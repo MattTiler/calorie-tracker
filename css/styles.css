@@ -123,6 +123,14 @@ button { font-family: inherit; }
 .list-item .li-kcal { font-weight: 700; white-space: nowrap; }
 .empty { color: var(--muted); text-align: center; padding: 30px 10px; }
 
+/* Stat rows (Settings) */
+.stat-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: .9rem;
+}
+.stat-row:last-of-type { border-bottom: none; }
+.stat-row strong { text-align: right; font-weight: 700; }
+
 /* Forms */
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: .82rem; color: var(--muted); margin-bottom: 5px; }
