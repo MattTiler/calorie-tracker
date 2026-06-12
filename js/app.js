@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v13';
+const APP_VERSION = 'v14';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -200,8 +200,9 @@ function gtinFromScan(text) {
 async function handleBarcode(raw, mode) {
   const code = gtinFromScan(raw);
   if (!code) {
-    // Show the raw scanned content so we can see what shape this QR actually is.
-    alert("No product barcode found in this code.\n\nScanned content:\n" + String(raw));
+    // Some QR codes (marketing links, internal product codes) don't carry the
+    // retail barcode. The striped barcode is the reliable thing to scan.
+    showToast('No product barcode in this QR — scan the striped barcode instead');
     return;
   }
   const local = state.foods.find(f => f.barcode === code);
