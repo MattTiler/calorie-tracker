@@ -178,9 +178,24 @@ async function runOnlineSearch(query, container, onPick) {
 }
 
 // Look up a scanned/typed barcode: local first (offline), then Open Food Facts.
-async function handleBarcode(code, mode) {
-  code = String(code).trim();
-  if (!code) return;
+// Extract a product barcode (GTIN) from scanned text. Plain EAN/UPC barcodes arrive
+// as digits; newer packs (M&S, etc.) use GS1 Digital Link QR codes — a URL with the
+// barcode in the /01/<gtin> segment, e.g.
+// https://id.gs1.org/01/05000168123456/10/LOT  →  5000168123456.
+function gtinFromScan(text) {
+  text = String(text).trim();
+  if (/^\d{8,14}$/.test(text)) return text;             // plain barcode number
+  const m = text.match(/(?:^|[/?&])01[/=](\d{8,14})/);  // GS1 Digital Link "01" AI
+  let code = m && m[1];
+  if (!code) { try { code = new URL(text).searchParams.get('01'); } catch (e) {} }
+  if (!code || !/^\d{8,14}$/.test(code)) return null;   // e.g. a marketing/recycling URL
+  // Digital Link uses GTIN-14 (zero-padded); the on-pack EAN-13 drops a leading zero.
+  return code.length === 14 && code.startsWith('0') ? code.slice(1) : code;
+}
+
+async function handleBarcode(raw, mode) {
+  const code = gtinFromScan(raw);
+  if (!code) { showToast("That QR code has no product barcode in it"); return; }
   const local = state.foods.find(f => f.barcode === code);
   if (local) { proceedWithFood(local, mode); return; }
   showToast('Looking up barcode…');
@@ -220,7 +235,9 @@ async function openScanModal(mode) {
   _modalCleanup = () => { try { reader.reset(); } catch (e) {} };
   try {
     await reader.decodeFromConstraints(
-      { video: { facingMode: { ideal: 'environment' } } },
+      // Higher resolution lets dense QR codes (e.g. GS1 Digital Link) decode from
+      // further away instead of needing the phone right up against the pack.
+      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
       $('#scan-vid', body),
       (result) => { if (result && !done) { done = true; finish(result.getText()); } }
     );
