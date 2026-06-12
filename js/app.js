@@ -3,6 +3,10 @@ import { DB } from './db.js';
 import { lineChart, barChart } from './charts.js';
 import { OFF } from './off.js';
 
+// Shown in Settings so you can confirm which deployed build the device is running.
+// Bump this together with the cache version in sw.js on every deploy.
+const APP_VERSION = 'v13';
+
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -784,7 +788,7 @@ function renderSettings() {
       <div class="tiny muted">${state.foods.length} foods · ${state.meals.length} meals saved</div>
     </div>
 
-    <p class="tiny muted" style="text-align:center">Calorie Tracker · v1<br>
+    <p class="tiny muted" style="text-align:center">Calorie Tracker · ${APP_VERSION}<br>
       Product data from <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" style="color:var(--muted)">Open Food Facts</a> (ODbL)</p>`;
 
   $('#g-save').onclick = async () => {
