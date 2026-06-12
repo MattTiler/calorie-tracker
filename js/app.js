@@ -195,7 +195,11 @@ function gtinFromScan(text) {
 
 async function handleBarcode(raw, mode) {
   const code = gtinFromScan(raw);
-  if (!code) { showToast("That QR code has no product barcode in it"); return; }
+  if (!code) {
+    // Show the raw scanned content so we can see what shape this QR actually is.
+    alert("No product barcode found in this code.\n\nScanned content:\n" + String(raw));
+    return;
+  }
   const local = state.foods.find(f => f.barcode === code);
   if (local) { proceedWithFood(local, mode); return; }
   showToast('Looking up barcode…');
