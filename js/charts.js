@@ -17,18 +17,43 @@ function cssVar(name, fallback) {
   return v || fallback;
 }
 
+// Round a range to a "nice" number (1/2/5 × 10ⁿ) for clean axis ticks.
+function niceNum(range, round) {
+  const exp = Math.floor(Math.log10(range));
+  const f = range / Math.pow(10, exp);
+  const nf = round
+    ? (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10)
+    : (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10);
+  return nf * Math.pow(10, exp);
+}
+
+// Given a data range, return tidy axis bounds + step for ~maxTicks gridlines.
+function niceScale(lo, hi, maxTicks = 4) {
+  const step = niceNum(niceNum(hi - lo || 1, false) / Math.max(1, maxTicks - 1), true);
+  return { min: Math.floor(lo / step) * step, max: Math.ceil(hi / step) * step, step };
+}
+
+// Format a tick value with just enough decimals for its step size.
+function fmtTick(v, step) {
+  const dec = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
+  return v.toFixed(dec);
+}
+
 // points: [{ label, value }]. goal (optional) draws a dashed reference line.
 export function lineChart(canvas, points, { goal = null } = {}) {
   const { ctx, w, h } = setupCanvas(canvas);
   ctx.clearRect(0, 0, w, h);
   if (!points.length) { drawEmpty(ctx, w, h); return; }
 
-  const padL = 38, padR = 10, padT = 12, padB = 22;
+  const padL = 42, padR = 10, padT = 12, padB = 22;
   const plotW = w - padL - padR, plotH = h - padT - padB;
   const values = points.map(p => p.value);
-  let max = Math.max(...values, goal || 0);
-  let min = Math.min(...values, 0);
-  if (max === min) max = min + 1;
+  // Scale to the data range (not 0) so small changes are visible, rounded to
+  // nice steps so the axis can be labelled with clear, evenly-spaced values.
+  let lo = Math.min(...values, goal != null ? goal : Infinity);
+  let hi = Math.max(...values, goal != null ? goal : -Infinity);
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const { min, max, step } = niceScale(lo, hi, 4);
   const x = i => padL + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
   const y = v => padT + plotH - ((v - min) / (max - min)) * plotH;
 
@@ -36,12 +61,22 @@ export function lineChart(canvas, points, { goal = null } = {}) {
   const accent = cssVar('--accent', '#2e7d32');
   const text = cssVar('--muted', '#777');
 
-  // axes labels (min / max)
-  ctx.fillStyle = text;
+  // horizontal gridlines + y-axis labels at each nice tick
   ctx.font = '11px system-ui, sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText(Math.round(max), padL - 6, padT + 8);
-  ctx.fillText(Math.round(min), padL - 6, padT + plotH);
+  ctx.lineWidth = 1;
+  const nTicks = Math.round((max - min) / step);
+  for (let i = 0; i <= nTicks; i++) {
+    const v = min + i * step;
+    const gy = y(v);
+    ctx.strokeStyle = grid;
+    ctx.beginPath();
+    ctx.moveTo(padL, gy);
+    ctx.lineTo(w - padR, gy);
+    ctx.stroke();
+    ctx.fillStyle = text;
+    ctx.textAlign = 'right';
+    ctx.fillText(fmtTick(v, step), padL - 6, gy + 4);
+  }
 
   // goal line
   if (goal != null) {
