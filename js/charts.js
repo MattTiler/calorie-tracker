@@ -39,8 +39,9 @@ function fmtTick(v, step) {
   return v.toFixed(dec);
 }
 
-// points: [{ label, value }]. goal (optional) draws a dashed reference line.
-export function lineChart(canvas, points, { goal = null } = {}) {
+// points: [{ label, value, t? }]. goal draws a dashed reference line; dots=false
+// hides the point markers (used for interpolated/resampled trend lines).
+export function lineChart(canvas, points, { goal = null, dots = true } = {}) {
   const { ctx, w, h } = setupCanvas(canvas);
   ctx.clearRect(0, 0, w, h);
   if (!points.length) { drawEmpty(ctx, w, h); return; }
@@ -105,8 +106,8 @@ export function lineChart(canvas, points, { goal = null } = {}) {
   points.forEach((p, i) => { i === 0 ? ctx.moveTo(x(p, i), y(p.value)) : ctx.lineTo(x(p, i), y(p.value)); });
   ctx.stroke();
 
-  // dots (skipped when crowded so dense ranges stay readable)
-  if (points.length <= 31) {
+  // dots (skipped when hidden, or when crowded so dense ranges stay readable)
+  if (dots && points.length <= 31) {
     ctx.fillStyle = accent;
     points.forEach((p, i) => { ctx.beginPath(); ctx.arc(x(p, i), y(p.value), 3, 0, Math.PI * 2); ctx.fill(); });
   }

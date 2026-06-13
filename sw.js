@@ -1,5 +1,5 @@
 // sw.js — caches the app shell so it works offline once loaded.
-const CACHE = 'calorie-tracker-v33';
+const CACHE = 'calorie-tracker-v34';
 const ASSETS = [
   './',
   './index.html',

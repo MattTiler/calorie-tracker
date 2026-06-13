@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v33';
+const APP_VERSION = 'v34';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -789,11 +789,36 @@ function ingredientGrams(food) {
 }
 
 // ================================================================ TRENDS
-// Weight chart time windows. `days: null` = show everything.
+// Weight chart time windows. `days: null` = show everything. Wide views resample
+// to evenly-spaced points so dense clusters of weigh-ins don't overlap.
 const WEIGHT_RANGES = [
-  { key: '1M', days: 30 }, { key: '3M', days: 90 }, { key: '1Y', days: 365 }, { key: 'All', days: null },
+  { key: '1M', days: 30, resample: false },
+  { key: '3M', days: 90, resample: false },
+  { key: '1Y', days: 365, resample: true },
+  { key: 'All', days: null, resample: true },
 ];
 let weightRange = '1M';
+
+// Resample a time-sorted [{t, value}] series to `n` evenly-spaced points across
+// its span, reading intermediate values off the line between actual weigh-ins.
+function resampleByTime(points, n) {
+  const t0 = points[0].t, t1 = points[points.length - 1].t;
+  if (t1 === t0) return points;
+  const out = [];
+  let j = 0;
+  for (let i = 0; i < n; i++) {
+    const t = t0 + (t1 - t0) * (i / (n - 1));
+    while (j < points.length - 2 && points[j + 1].t <= t) j++;
+    const a = points[j], b = points[j + 1];
+    const frac = b.t === a.t ? 0 : (t - a.t) / (b.t - a.t);
+    out.push({
+      t,
+      value: a.value + (b.value - a.value) * frac,
+      label: new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+    });
+  }
+  return out;
+}
 
 async function renderTrends() {
   const view = $('#view');
@@ -842,7 +867,10 @@ async function renderTrends() {
   const drawWeight = () => {
     const r = WEIGHT_RANGES.find(x => x.key === weightRange) || WEIGHT_RANGES[0];
     const cutoff = r.days == null ? -Infinity : parseISO(addDays(todayStr(), -r.days)).getTime();
-    lineChart($('#weight-chart'), wPoints.filter(p => p.t >= cutoff));
+    let pts = wPoints.filter(p => p.t >= cutoff);
+    // Wide views: even out clustered weigh-ins into a clean 30-point trend line.
+    if (r.resample && pts.length >= 3) pts = resampleByTime(pts, 30);
+    lineChart($('#weight-chart'), pts, { dots: !r.resample });
   };
   drawWeight();
   $$('#weight-ranges .chip', view).forEach(b => b.onclick = () => {
