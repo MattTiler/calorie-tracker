@@ -87,10 +87,13 @@ button { font-family: inherit; }
 .row-actions { display: flex; gap: 6px; }
 
 /* Date nav */
-.date-nav { position: relative; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.date-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .date-nav .date-label { font-weight: 600; font-size: 1.05rem; }
-.date-nav-right { display: flex; gap: 8px; }
 .icon-btn:disabled { opacity: .35; cursor: default; }
+/* Calendar jump button: a real date input overlaid on the 📅 icon so tapping it
+   reliably opens the native picker (iOS Safari ignores showPicker on hidden inputs). */
+.cal-label { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; }
+.cal-label input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: pointer; }
 
 /* Summary ring / numbers */
 .summary { text-align: center; }

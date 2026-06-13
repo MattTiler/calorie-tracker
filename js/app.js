@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v24';
+const APP_VERSION = 'v25';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -35,8 +35,8 @@ function dayNavLabel(s) {
   return s === todayStr() ? `${d} (Today)` : d;
 }
 
-// You can look back freely but only up to a week ahead.
-const MAX_FUTURE_DAYS = 7;
+// You can look back freely but only a few days ahead.
+const MAX_FUTURE_DAYS = 3;
 const maxLogDate = () => addDays(todayStr(), MAX_FUTURE_DAYS);
 
 // All tracked per-100g nutrient keys (kcal + macros + extras).
@@ -303,12 +303,7 @@ async function renderToday() {
     <div class="date-nav">
       <button class="icon-btn" id="prev-day" aria-label="Previous day">‹</button>
       <span class="date-label">${dayNavLabel(state.date)}</span>
-      <span class="date-nav-right">
-        <button class="icon-btn" id="next-day" aria-label="Next day" ${state.date >= maxLogDate() ? 'disabled' : ''}>›</button>
-        <button class="icon-btn" id="cal-day" aria-label="Pick a date">📅</button>
-      </span>
-      <input type="date" id="date-picker" value="${state.date}" max="${maxLogDate()}"
-        style="position:absolute;width:1px;height:1px;opacity:0;border:0;padding:0" />
+      <button class="icon-btn" id="next-day" aria-label="Next day" ${state.date >= maxLogDate() ? 'disabled' : ''}>›</button>
     </div>
 
     <div class="card summary">
@@ -336,17 +331,22 @@ async function renderToday() {
         : `<div class="empty">Nothing logged yet.<br>Tap “Add food / meal” to start.</div>`}
     </div>`;
 
+  // Calendar jump lives in the header, top-right, level with the title. The date
+  // input overlays the 📅 icon so tapping it opens the native picker reliably on iOS.
+  $('#header-actions').innerHTML = `
+    <label class="icon-btn cal-label" aria-label="Pick a date">📅
+      <input type="date" id="date-picker" value="${state.date}" max="${maxLogDate()}" />
+    </label>`;
+  $('#date-picker').onchange = (e) => {
+    if (!e.target.value) return;
+    state.date = e.target.value > maxLogDate() ? maxLogDate() : e.target.value;
+    renderToday();
+  };
+
   $('#prev-day').onclick = () => { state.date = addDays(state.date, -1); renderToday(); };
   $('#next-day').onclick = () => {
-    if (state.date >= maxLogDate()) return; // no more than a week ahead
+    if (state.date >= maxLogDate()) return; // capped a few days ahead
     state.date = addDays(state.date, 1); renderToday();
-  };
-  const picker = $('#date-picker', view);
-  $('#cal-day').onclick = () => { picker.showPicker ? picker.showPicker() : picker.click(); };
-  picker.onchange = () => {
-    if (!picker.value) return;
-    state.date = picker.value > maxLogDate() ? maxLogDate() : picker.value;
-    renderToday();
   };
   $('#add-log').onclick = openAddToLog;
 
