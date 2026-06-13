@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v25';
+const APP_VERSION = 'v26';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -331,17 +331,9 @@ async function renderToday() {
         : `<div class="empty">Nothing logged yet.<br>Tap “Add food / meal” to start.</div>`}
     </div>`;
 
-  // Calendar jump lives in the header, top-right, level with the title. The date
-  // input overlays the 📅 icon so tapping it opens the native picker reliably on iOS.
-  $('#header-actions').innerHTML = `
-    <label class="icon-btn cal-label" aria-label="Pick a date">📅
-      <input type="date" id="date-picker" value="${state.date}" max="${maxLogDate()}" />
-    </label>`;
-  $('#date-picker').onchange = (e) => {
-    if (!e.target.value) return;
-    state.date = e.target.value > maxLogDate() ? maxLogDate() : e.target.value;
-    renderToday();
-  };
+  // Calendar jump lives in the header, top-right, level with the title.
+  $('#header-actions').innerHTML = `<button class="icon-btn" id="cal-day" aria-label="Pick a date">📅</button>`;
+  $('#cal-day').onclick = openDatePicker;
 
   $('#prev-day').onclick = () => { state.date = addDays(state.date, -1); renderToday(); };
   $('#next-day').onclick = () => {
@@ -357,6 +349,49 @@ async function renderToday() {
     renderToday();
   });
   $$('.log-row[data-kind="food"]', view).forEach(row => row.onclick = () => editFoodLogEntry(Number(row.dataset.id)));
+}
+
+// Custom month calendar so future dates past the limit are genuinely unselectable
+// (the native date picker on iOS ignores `max` and lets you spin to any year).
+function openDatePicker() {
+  const max = maxLogDate();
+  const start = parseISO(state.date);
+  let vy = start.getFullYear(), vm = start.getMonth();
+  const body = openModal('Pick a date', '<div id="cal-wrap"></div>');
+
+  const draw = () => {
+    const first = new Date(vy, vm, 1);
+    const pad = (first.getDay() + 6) % 7;            // Monday-first offset
+    const days = new Date(vy, vm + 1, 0).getDate();
+    const canNext = toISO(new Date(vy, vm + 1, 1)) <= max; // next month has selectable days?
+
+    const cells = [];
+    for (let i = 0; i < pad; i++) cells.push('<div class="cal-cell empty"></div>');
+    for (let d = 1; d <= days; d++) {
+      const iso = toISO(new Date(vy, vm, d));
+      const cls = ['cal-cell'];
+      if (iso > max) cls.push('disabled');
+      if (iso === todayStr()) cls.push('today');
+      if (iso === state.date) cls.push('sel');
+      cells.push(`<button class="${cls.join(' ')}" ${iso > max ? 'disabled' : `data-iso="${iso}"`}>${d}</button>`);
+    }
+
+    $('#cal-wrap', body).innerHTML = `
+      <div class="cal-head">
+        <button class="icon-btn" id="cal-prev" aria-label="Previous month">‹</button>
+        <span class="cal-month">${first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span>
+        <button class="icon-btn" id="cal-next" aria-label="Next month" ${canNext ? '' : 'disabled'}>›</button>
+      </div>
+      <div class="cal-grid cal-dow">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => `<span class="cal-dowlabel">${d}</span>`).join('')}</div>
+      <div class="cal-grid">${cells.join('')}</div>`;
+
+    $('#cal-prev', body).onclick = () => { if (--vm < 0) { vm = 11; vy--; } draw(); };
+    if (canNext) $('#cal-next', body).onclick = () => { if (++vm > 11) { vm = 0; vy++; } draw(); };
+    $$('.cal-cell[data-iso]', body).forEach(c => c.onclick = () => {
+      state.date = c.dataset.iso; closeModal(); renderToday();
+    });
+  };
+  draw();
 }
 
 function logRow(e) {

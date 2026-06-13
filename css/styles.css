@@ -90,10 +90,23 @@ button { font-family: inherit; }
 .date-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .date-nav .date-label { font-weight: 600; font-size: 1.05rem; }
 .icon-btn:disabled { opacity: .35; cursor: default; }
-/* Calendar jump button: a real date input overlaid on the 📅 icon so tapping it
-   reliably opens the native picker (iOS Safari ignores showPicker on hidden inputs). */
-.cal-label { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; }
-.cal-label input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: pointer; }
+
+/* Custom date-picker calendar */
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-month { font-weight: 600; font-size: 1.05rem; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow { margin-bottom: 6px; }
+.cal-dowlabel { text-align: center; font-size: .7rem; color: var(--muted); }
+.cal-cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: var(--text);
+  border-radius: 9px; font-size: .92rem; cursor: pointer;
+}
+.cal-cell.empty { visibility: hidden; }
+.cal-cell.today { border: 1px solid var(--accent); }
+.cal-cell.sel { background: var(--accent); color: #fff; font-weight: 700; }
+.cal-cell.disabled { color: var(--muted); opacity: .3; cursor: default; }
+.cal-cell:not(.disabled):not(.sel):active { background: var(--accent-soft); }
 
 /* Summary ring / numbers */
 .summary { text-align: center; }
