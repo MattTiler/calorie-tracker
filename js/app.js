@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v21';
+const APP_VERSION = 'v22';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -352,8 +352,9 @@ function openAddToLog() {
   // Log search is intentionally local-only: it looks up your saved foods/meals.
   // Add new products from the Foods tab (online search) or via barcode scan here.
   const body = openModal('Add to ' + prettyDate(state.date).toLowerCase(), `
-    <div class="search-box"><input id="add-search" placeholder="Search your foods & meals…" autocomplete="off" /></div>
     <div class="chips"><button class="chip" id="add-scan">📷 Scan barcode</button></div>
+    <div class="section-title">Your foods & meals</div>
+    <div class="search-box"><input id="add-search" placeholder="Search your foods & meals…" autocomplete="off" /></div>
     <div id="add-results"></div>`);
   const search = $('#add-search', body);
   const render = () => renderAddResults(search.value.trim().toLowerCase());
@@ -369,12 +370,12 @@ function renderAddResults(q) {
   const box = $('#add-results');
 
   const sections = [];
-  if (matchM.length) sections.push(`<div class="section-title">Your meals</div><ul class="list">${matchM.map(m => `
+  if (matchM.length) sections.push(`<ul class="list">${matchM.map(m => `
       <li class="list-item pick" data-type="meal" data-id="${m.id}">
         <div class="li-main"><div class="li-title">🍲 ${esc(m.name)}</div>
         <div class="li-sub">${round(m.perServing.kcal)} kcal / serving · makes ${m.portions}</div></div>
         <span class="kcal-pill">+</span></li>`).join('')}</ul>`);
-  if (matchF.length) sections.push(`<div class="section-title">Your foods</div><ul class="list">${matchF.map(f => `
+  if (matchF.length) sections.push(`<ul class="list">${matchF.map(f => `
       <li class="list-item pick" data-type="food" data-id="${f.id}">
         <div class="li-main"><div class="li-title">${esc(f.name)}</div>
         <div class="li-sub">${round(f.kcal)} kcal / 100g</div></div>
@@ -471,11 +472,12 @@ function renderFoods() {
 
   const view = $('#view');
   view.innerHTML = `
-    <div class="search-box"><input id="food-search" placeholder="Search a product or food…" autocomplete="off" /></div>
     <div class="chips">
       <button class="chip" id="food-scan">📷 Scan barcode</button>
       <button class="chip" id="food-manual">✎ Add manually</button>
     </div>
+    <div class="section-title">Your foods</div>
+    <div class="search-box"><input id="food-search" placeholder="Search a product or food…" autocomplete="off" /></div>
     <div class="card hidden" id="food-list-card"><ul class="list" id="food-list"></ul></div>
     <div id="food-online-results"></div>`;
   const search = $('#food-search', view);
@@ -488,7 +490,7 @@ function renderFoods() {
       $('#food-list').innerHTML = '';
     } else {
       card.classList.remove('hidden');
-      $('#food-list').innerHTML = `<div class="section-title" style="margin-top:4px">Your foods</div>` + list.map(f => `
+      $('#food-list').innerHTML = list.map(f => `
         <li class="list-item">
           <div class="li-main"><div class="li-title">${esc(f.name)}</div>
           <div class="li-sub">${round(f.kcal)} kcal · P ${round1(f.protein)} C ${round1(f.carbs)} F ${round1(f.fat)} / 100g</div></div>
@@ -667,15 +669,16 @@ function renderMealBuilder(isEdit) {
 
 function pickIngredient() {
   const body = openModal('Add ingredient', `
-    <div class="search-box"><input id="ing-search" placeholder="Search a product or food…" autocomplete="off" /></div>
     <div class="chips"><button class="chip" id="ing-scan">📷 Scan barcode</button></div>
+    <div class="section-title">Your foods</div>
+    <div class="search-box"><input id="ing-search" placeholder="Search a product or food…" autocomplete="off" /></div>
     <div id="ing-results"></div>
     <div id="ing-online-results"></div>`);
   const search = $('#ing-search', body);
   const render = () => {
     const q = search.value.trim().toLowerCase();
     const list = (q ? state.foods.filter(f => f.name.toLowerCase().includes(q)) : state.foods).slice(0, 50);
-    $('#ing-results').innerHTML = list.length ? `<div class="section-title">Your foods</div><ul class="list">${list.map(f => `
+    $('#ing-results').innerHTML = list.length ? `<ul class="list">${list.map(f => `
       <li class="list-item pick-ing" data-id="${f.id}">
         <div class="li-main"><div class="li-title">${esc(f.name)}</div><div class="li-sub">${round(f.kcal)} kcal / 100g</div></div>
         <span class="kcal-pill">+</span></li>`).join('')}</ul>`
