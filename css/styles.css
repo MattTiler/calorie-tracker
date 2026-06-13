@@ -84,6 +84,7 @@ button { font-family: inherit; }
 .btn-ghost { background: transparent; color: var(--muted); }
 .btn-danger { background: transparent; color: var(--danger); }
 .btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .4; cursor: default; }
 .icon-btn {
   border: none; background: var(--card); color: var(--text);
   width: 38px; height: 38px; border-radius: 10px; font-size: 1.1rem; cursor: pointer;

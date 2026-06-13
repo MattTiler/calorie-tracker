@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v0.46';
+const APP_VERSION = 'v0.47';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -790,9 +790,9 @@ function ingredientGrams(food) {
 
 // Log/edit a weight: pick a day on a calendar, then enter the weight. Selecting a
 // day that already has a weigh-in pre-fills its value, so you can see and change it.
-function openWeightLogger(weightsByDate) {
+function openWeightLogger(weightsByDate, initialDate = todayStr()) {
   const max = todayStr(); // no future weigh-ins
-  let selected = todayStr();
+  let selected = initialDate;
   const start = parseISO(selected);
   let vy = start.getFullYear(), vm = start.getMonth();
 
@@ -802,14 +802,20 @@ function openWeightLogger(weightsByDate) {
       <label>Weight (kg) · <span id="w-when"></span></label>
       <input id="w-input" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 78.5" />
     </div>
-    <button class="btn btn-primary btn-block" id="w-confirm">Log weight</button>`);
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" id="w-confirm" style="flex:1">Log weight</button>
+      <button class="btn btn-danger" id="w-delete" style="flex:0 0 56px;border:1px solid var(--border)" aria-label="Delete this day's weight">🗑️</button>
+    </div>`);
+
+  const whenLabel = () => selected === todayStr()
+    ? 'today'
+    : parseISO(selected).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
   const sync = () => {
     const existing = weightsByDate[selected];
     $('#w-input', body).value = existing != null ? existing : '';
-    $('#w-when', body).textContent = selected === todayStr()
-      ? 'today'
-      : parseISO(selected).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    $('#w-when', body).textContent = whenLabel();
+    $('#w-delete', body).disabled = existing == null; // only deletable when the day has data
   };
 
   const draw = () => {
@@ -847,6 +853,12 @@ function openWeightLogger(weightsByDate) {
     if (!val || val <= 0) return showToast('Enter a weight');
     await DB.put('weights', { date: selected, weight: round1(val) });
     closeModal(); showToast('Weight logged'); renderTrends();
+  };
+  $('#w-delete', body).onclick = async () => {
+    if (weightsByDate[selected] == null) return;
+    if (!confirm(`Delete the weight logged for ${whenLabel()}?`)) return;
+    await DB.delete('weights', selected);
+    closeModal(); showToast('Removed'); renderTrends();
   };
 }
 
@@ -961,7 +973,7 @@ async function renderTrends() {
     ${weights.length ? `<div class="section-title">Weight history</div><div class="card"><ul class="list">${
       weights.slice().reverse().map(w => `<li class="list-item">
         <div class="li-main"><div class="li-title">${w.weight} kg</div><div class="li-sub">${parseISO(w.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</div></div>
-        <button class="icon-btn w-del" data-date="${w.date}" aria-label="Remove">✕</button></li>`).join('')}</ul></div>` : ''}`;
+        <button class="icon-btn w-edit" data-date="${w.date}" aria-label="Edit">✎</button></li>`).join('')}</ul></div>` : ''}`;
 
   barChart($('#cal-chart'), calPoints, {
     goal: state.goals.kcal,
@@ -994,9 +1006,7 @@ async function renderTrends() {
   });
 
   $('#w-add').onclick = () => openWeightLogger(weightsByDate);
-  $$('.w-del', view).forEach(b => b.onclick = async () => {
-    await DB.delete('weights', b.dataset.date); showToast('Removed'); renderTrends();
-  });
+  $$('.w-edit', view).forEach(b => b.onclick = () => openWeightLogger(weightsByDate, b.dataset.date));
 }
 
 // ================================================================ SETTINGS
