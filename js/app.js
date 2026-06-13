@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v17';
+const APP_VERSION = 'v18';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -51,7 +51,8 @@ const state = {
   draftMeal: null,
 };
 
-const DEFAULT_GOALS = { kcal: 2000, protein: 100, carbs: 250, fat: 70, fibre: 30, salt: 6 };
+// Sugars & sat fat are daily limits (NHS guide: ~30g free sugars, ~20g sat fat).
+const DEFAULT_GOALS = { kcal: 2000, protein: 100, carbs: 250, fat: 70, sugars: 30, satFat: 20, fibre: 30, salt: 6 };
 
 // ---------------------------------------------------------------- init
 async function init() {
@@ -286,6 +287,19 @@ async function renderToday() {
       <div class="tiny muted">${isLimit ? `limit ${goal}g` : `aim ${goal}g`}</div>
     </div>`;
 
+  // sub-macro tile (sugars under carbs, sat fat under fat): a limit bar that
+  // shares the parent macro's colour and turns red when over the limit.
+  const subMacro = (cls, label, val, goal, parent) => {
+    const isOver = goal && val > goal;
+    return `
+    <div class="macro sub ${cls}">
+      <div class="mlabel">↳ ${label}</div>
+      <div class="mval"${isOver ? ' style="color:var(--danger)"' : ''}>${round1(val)}g</div>
+      <div class="mbar"><span style="width:${goal ? Math.min(100, (val / goal) * 100) : 0}%;${isOver ? 'background:var(--danger)' : ''}"></span></div>
+      <div class="tiny muted">limit ${goal}g · ${parent}</div>
+    </div>`;
+  };
+
   view.innerHTML = `
     <div class="date-nav">
       <button class="icon-btn" id="prev-day">‹</button>
@@ -299,8 +313,13 @@ async function renderToday() {
       <div class="progress ${over ? 'over' : ''}"><span style="width:${pct}%"></span></div>
       <div class="macros">
         ${macroBar('p', 'Protein', total.protein, g.protein)}
-        ${macroBar('c', 'Carbs', total.carbs, g.carbs, `sugars ${round1(total.sugars)}g`)}
-        ${macroBar('f', 'Fat', total.fat, g.fat, `sat ${round1(total.satFat)}g`)}
+        ${macroBar('c', 'Carbs', total.carbs, g.carbs)}
+        ${macroBar('f', 'Fat', total.fat, g.fat)}
+      </div>
+      <div class="macros submacros">
+        <div></div>
+        ${subMacro('c', 'Sugars', total.sugars, g.sugars, 'of carbs')}
+        ${subMacro('f', 'Sat fat', total.satFat, g.satFat, 'of fat')}
       </div>
       <div class="macros" style="grid-template-columns:repeat(2,1fr)">
         ${extraStat('p', 'Fibre', total.fibre, g.fibre, false)}
@@ -813,7 +832,11 @@ async function renderSettings() {
         <div class="field"><label>Fat (g)</label><input id="g-fat" type="number" inputmode="decimal" value="${g.fat}" /></div>
         <div class="field"><label>Fibre — aim (g)</label><input id="g-fibre" type="number" inputmode="decimal" value="${g.fibre}" /></div>
       </div>
-      <div class="field"><label>Salt — daily limit (g)</label><input id="g-salt" type="number" inputmode="decimal" value="${g.salt}" /></div>
+      <div class="field-row">
+        <div class="field"><label>Sugars — limit (g)</label><input id="g-sugars" type="number" inputmode="decimal" value="${g.sugars}" /></div>
+        <div class="field"><label>Sat fat — limit (g)</label><input id="g-satfat" type="number" inputmode="decimal" value="${g.satFat}" /></div>
+        <div class="field"><label>Salt — limit (g)</label><input id="g-salt" type="number" inputmode="decimal" value="${g.salt}" /></div>
+      </div>
       <button class="btn btn-primary btn-block" id="g-save">Save goals</button>
     </div>
 
@@ -840,6 +863,8 @@ async function renderSettings() {
       protein: parseFloat($('#g-protein').value) || 0,
       carbs: parseFloat($('#g-carbs').value) || 0,
       fat: parseFloat($('#g-fat').value) || 0,
+      sugars: parseFloat($('#g-sugars').value) || 0,
+      satFat: parseFloat($('#g-satfat').value) || 0,
       fibre: parseFloat($('#g-fibre').value) || 0,
       salt: parseFloat($('#g-salt').value) || 0,
     };
@@ -881,7 +906,7 @@ async function importData(e) {
       for (const row of (data[store] || [])) await DB.put(store, row);
     }
     const savedGoals = await DB.getSetting('goals', null);
-    if (savedGoals) state.goals = savedGoals;
+    state.goals = { ...DEFAULT_GOALS, ...(savedGoals || {}) };
     await refreshCaches();
     showToast('Imported'); switchTab('today');
   } catch (err) {
