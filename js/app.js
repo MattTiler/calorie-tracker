@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v32';
+const APP_VERSION = 'v33';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -789,6 +789,12 @@ function ingredientGrams(food) {
 }
 
 // ================================================================ TRENDS
+// Weight chart time windows. `days: null` = show everything.
+const WEIGHT_RANGES = [
+  { key: '1M', days: 30 }, { key: '3M', days: 90 }, { key: '1Y', days: 365 }, { key: 'All', days: null },
+];
+let weightRange = '1M';
+
 async function renderTrends() {
   const view = $('#view');
   const weights = (await DB.getAll('weights')).sort((a, b) => a.date.localeCompare(b.date));
@@ -816,6 +822,8 @@ async function renderTrends() {
 
     <div class="card">
       <h3>Weight over time</h3>
+      <div class="chips" id="weight-ranges">${WEIGHT_RANGES.map(r =>
+        `<button class="chip${r.key === weightRange ? ' active' : ''}" data-range="${r.key}">${r.key}</button>`).join('')}</div>
       <canvas id="weight-chart"></canvas>
       <div class="field-row" style="margin-top:14px">
         <div class="field"><label>Weight (kg)</label><input id="w-val" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 78.5" /></div>
@@ -830,7 +838,18 @@ async function renderTrends() {
         <button class="icon-btn w-del" data-date="${w.date}" aria-label="Remove">✕</button></li>`).join('')}</ul></div>` : ''}`;
 
   barChart($('#cal-chart'), calPoints, { goal: state.goals.kcal });
-  lineChart($('#weight-chart'), wPoints);
+
+  const drawWeight = () => {
+    const r = WEIGHT_RANGES.find(x => x.key === weightRange) || WEIGHT_RANGES[0];
+    const cutoff = r.days == null ? -Infinity : parseISO(addDays(todayStr(), -r.days)).getTime();
+    lineChart($('#weight-chart'), wPoints.filter(p => p.t >= cutoff));
+  };
+  drawWeight();
+  $$('#weight-ranges .chip', view).forEach(b => b.onclick = () => {
+    weightRange = b.dataset.range;
+    $$('#weight-ranges .chip', view).forEach(c => c.classList.toggle('active', c.dataset.range === weightRange));
+    drawWeight();
+  });
 
   $('#w-add').onclick = async () => {
     const val = parseFloat($('#w-val').value);

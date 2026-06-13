@@ -105,9 +105,11 @@ export function lineChart(canvas, points, { goal = null } = {}) {
   points.forEach((p, i) => { i === 0 ? ctx.moveTo(x(p, i), y(p.value)) : ctx.lineTo(x(p, i), y(p.value)); });
   ctx.stroke();
 
-  // dots
-  ctx.fillStyle = accent;
-  points.forEach((p, i) => { ctx.beginPath(); ctx.arc(x(p, i), y(p.value), 3, 0, Math.PI * 2); ctx.fill(); });
+  // dots (skipped when crowded so dense ranges stay readable)
+  if (points.length <= 31) {
+    ctx.fillStyle = accent;
+    points.forEach((p, i) => { ctx.beginPath(); ctx.arc(x(p, i), y(p.value), 3, 0, Math.PI * 2); ctx.fill(); });
+  }
 
   // x labels (first, middle, last)
   ctx.fillStyle = text;
