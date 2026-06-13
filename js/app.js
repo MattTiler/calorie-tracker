@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v20';
+const APP_VERSION = 'v21';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -349,17 +349,16 @@ function logRow(e) {
 
 // ================================================================ ADD TO LOG
 function openAddToLog() {
+  // Log search is intentionally local-only: it looks up your saved foods/meals.
+  // Add new products from the Foods tab (online search) or via barcode scan here.
   const body = openModal('Add to ' + prettyDate(state.date).toLowerCase(), `
-    <div class="search-box"><input id="add-search" placeholder="Search a product or food…" autocomplete="off" /></div>
+    <div class="search-box"><input id="add-search" placeholder="Search your foods & meals…" autocomplete="off" /></div>
     <div class="chips"><button class="chip" id="add-scan">📷 Scan barcode</button></div>
-    <div id="add-results"></div>
-    <div id="add-online-results"></div>`);
+    <div id="add-results"></div>`);
   const search = $('#add-search', body);
   const render = () => renderAddResults(search.value.trim().toLowerCase());
   search.addEventListener('input', render);
   render();
-  attachOnlineAutoSearch(search, $('#add-online-results', body),
-    async (food) => proceedWithFood(await ensureFoodSaved(food), 'log'));
   $('#add-scan', body).onclick = () => openScanModal('log');
   setTimeout(() => search.focus(), 50);
 }
@@ -382,8 +381,8 @@ function renderAddResults(q) {
         <span class="kcal-pill">+</span></li>`).join('')}</ul>`);
 
   box.innerHTML = sections.length ? sections.join('')
-    : (q.length >= 3 ? `<div class="empty tiny">No saved matches — searching online…</div>`
-      : `<div class="empty">Type a product or food to search.<br><span class="tiny">Tip: 📷 scan a barcode. Foods you add are saved here for next time.</span></div>`);
+    : (q.length >= 1 ? `<div class="empty">No saved foods or meals match “${esc(q)}”.<br><span class="tiny">📷 Scan a barcode, or add it from the Foods tab to save it here.</span></div>`
+      : `<div class="empty">Search your saved foods & meals.<br><span class="tiny">📷 Scan a barcode, or add new products from the Foods tab.</span></div>`);
 
   $$('.pick', box).forEach(li => li.onclick = () => {
     const id = Number(li.dataset.id);
