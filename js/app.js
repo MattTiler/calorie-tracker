@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = '0.39';
+const APP_VERSION = 'v0.40';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -946,7 +946,7 @@ async function renderTrends() {
       <div class="chips" id="weight-ranges">${WEIGHT_RANGES.map(r =>
         `<button class="chip${r.key === weightRange ? ' active' : ''}" data-range="${r.key}">${r.key}</button>`).join('')}</div>
       <canvas id="weight-chart"></canvas>
-      <button class="btn btn-primary btn-block" id="w-add" style="margin-top:14px">＋ Log weight</button>
+      <button class="btn btn-primary btn-block" id="w-add" style="margin-top:14px">Log weight</button>
     </div>
 
     ${weights.length ? `<div class="section-title">Weight history</div><div class="card"><ul class="list">${
