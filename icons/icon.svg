@@ -1,11 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="112" fill="#ffffff"/>
-  <!-- apple body -->
-  <path d="M256 196 C236 168 196 150 168 158 C112 172 96 238 100 300 C104 372 150 432 200 440 C228 445 244 428 256 410 C268 428 284 445 312 440 C362 432 408 372 412 300 C416 238 400 172 344 158 C316 150 276 168 256 196 Z" fill="#e53935"/>
-  <!-- tick -->
-  <path d="M206 300 L242 338 L322 250" fill="none" stroke="#ffffff"
-        stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- leaf + stalk -->
-  <ellipse cx="300" cy="140" rx="46" ry="20" fill="#9ccc65" transform="rotate(-35 300 140)"/>
-  <line x1="256" y1="200" x2="264" y2="150" stroke="#5d4037" stroke-width="13" stroke-linecap="round"/>
+  <g transform="translate(0 -42)">
+    <!-- apple body -->
+    <path d="M256 196 C236 168 196 150 168 158 C112 172 96 238 100 300 C104 372 150 432 200 440 C228 445 244 428 256 410 C268 428 284 445 312 440 C362 432 408 372 412 300 C416 238 400 172 344 158 C316 150 276 168 256 196 Z" fill="#e53935"/>
+    <!-- tick -->
+    <path d="M206 300 L242 338 L322 250" fill="none" stroke="#ffffff"
+          stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- leaf + stalk -->
+    <ellipse cx="300" cy="140" rx="46" ry="20" fill="#9ccc65" transform="rotate(-35 300 140)"/>
+    <line x1="256" y1="200" x2="264" y2="150" stroke="#5d4037" stroke-width="13" stroke-linecap="round"/>
+  </g>
 </svg>
