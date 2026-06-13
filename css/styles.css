@@ -28,6 +28,8 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;          /* don't let iOS rescale text */
+  touch-action: manipulation;              /* disable double-tap-to-zoom */
   padding-bottom: calc(64px + env(safe-area-inset-bottom));
 }
 
