@@ -87,8 +87,10 @@ button { font-family: inherit; }
 .row-actions { display: flex; gap: 6px; }
 
 /* Date nav */
-.date-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.date-nav { position: relative; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .date-nav .date-label { font-weight: 600; font-size: 1.05rem; }
+.date-nav-right { display: flex; gap: 8px; }
+.icon-btn:disabled { opacity: .35; cursor: default; }
 
 /* Summary ring / numbers */
 .summary { text-align: center; }

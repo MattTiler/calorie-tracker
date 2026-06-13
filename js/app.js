@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v23';
+const APP_VERSION = 'v24';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -28,6 +28,16 @@ function prettyDate(s) {
   if (s === addDays(t, 1)) return 'Tomorrow';
   return parseISO(s).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 }
+
+// Label for the Log tab day switcher: always the date, with "(Today)" appended for today.
+function dayNavLabel(s) {
+  const d = parseISO(s).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  return s === todayStr() ? `${d} (Today)` : d;
+}
+
+// You can look back freely but only up to a week ahead.
+const MAX_FUTURE_DAYS = 7;
+const maxLogDate = () => addDays(todayStr(), MAX_FUTURE_DAYS);
 
 // All tracked per-100g nutrient keys (kcal + macros + extras).
 const NUTRIENTS = ['kcal', 'protein', 'carbs', 'fat', 'satFat', 'sugars', 'fibre', 'salt'];
@@ -291,9 +301,14 @@ async function renderToday() {
 
   view.innerHTML = `
     <div class="date-nav">
-      <button class="icon-btn" id="prev-day">‹</button>
-      <span class="date-label">${prettyDate(state.date)}</span>
-      <button class="icon-btn" id="next-day">›</button>
+      <button class="icon-btn" id="prev-day" aria-label="Previous day">‹</button>
+      <span class="date-label">${dayNavLabel(state.date)}</span>
+      <span class="date-nav-right">
+        <button class="icon-btn" id="next-day" aria-label="Next day" ${state.date >= maxLogDate() ? 'disabled' : ''}>›</button>
+        <button class="icon-btn" id="cal-day" aria-label="Pick a date">📅</button>
+      </span>
+      <input type="date" id="date-picker" value="${state.date}" max="${maxLogDate()}"
+        style="position:absolute;width:1px;height:1px;opacity:0;border:0;padding:0" />
     </div>
 
     <div class="card summary">
@@ -322,7 +337,17 @@ async function renderToday() {
     </div>`;
 
   $('#prev-day').onclick = () => { state.date = addDays(state.date, -1); renderToday(); };
-  $('#next-day').onclick = () => { state.date = addDays(state.date, 1); renderToday(); };
+  $('#next-day').onclick = () => {
+    if (state.date >= maxLogDate()) return; // no more than a week ahead
+    state.date = addDays(state.date, 1); renderToday();
+  };
+  const picker = $('#date-picker', view);
+  $('#cal-day').onclick = () => { picker.showPicker ? picker.showPicker() : picker.click(); };
+  picker.onchange = () => {
+    if (!picker.value) return;
+    state.date = picker.value > maxLogDate() ? maxLogDate() : picker.value;
+    renderToday();
+  };
   $('#add-log').onclick = openAddToLog;
 
   $$('.log-del', view).forEach(b => b.onclick = async (e) => {
