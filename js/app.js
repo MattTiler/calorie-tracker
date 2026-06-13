@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v0.47';
+const APP_VERSION = 'v0.48';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -804,7 +804,9 @@ function openWeightLogger(weightsByDate, initialDate = todayStr()) {
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-primary" id="w-confirm" style="flex:1">Log weight</button>
-      <button class="btn btn-danger" id="w-delete" style="flex:0 0 56px;border:1px solid var(--border)" aria-label="Delete this day's weight">🗑️</button>
+      <button class="btn" id="w-delete" aria-label="Delete this day's weight" style="flex:0 0 56px;background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;padding:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+      </button>
     </div>`);
 
   const whenLabel = () => selected === todayStr()
