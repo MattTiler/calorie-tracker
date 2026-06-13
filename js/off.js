@@ -54,7 +54,9 @@ export const OFF = {
   async search(query) {
     const q = query.trim();
     if (!q) return [];
-    const url = `${SEARCH_URL}?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${FIELDS}`;
+    // sort_by=unique_scans_n ranks by popularity (most-scanned first), so common
+    // UK products surface above the long tail of obscure/foreign entries.
+    const url = `${SEARCH_URL}?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${FIELDS}`;
     const data = await getJSON(url);
     return (data.products || []).map(normalize).filter(Boolean);
   },
