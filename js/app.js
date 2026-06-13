@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v31';
+const APP_VERSION = 'v32';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -802,7 +802,7 @@ async function renderTrends() {
     kcalByDay[day] = entries.reduce((s, e) => s + e.kcal, 0);
   }
   const calPoints = days.map(d => ({ label: parseISO(d).toLocaleDateString(undefined, { day: 'numeric' }), value: kcalByDay[d] }));
-  const wPoints = weights.map(w => ({ label: parseISO(w.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), value: w.weight }));
+  const wPoints = weights.map(w => ({ label: parseISO(w.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), value: w.weight, t: parseISO(w.date).getTime() }));
 
   const logged = days.filter(d => kcalByDay[d] > 0);
   const avg = logged.length ? round(logged.reduce((s, d) => s + kcalByDay[d], 0) / logged.length) : 0;

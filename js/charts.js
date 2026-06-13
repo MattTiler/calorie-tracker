@@ -54,7 +54,16 @@ export function lineChart(canvas, points, { goal = null } = {}) {
   let hi = Math.max(...values, goal != null ? goal : -Infinity);
   if (lo === hi) { lo -= 1; hi += 1; }
   const { min, max, step } = niceScale(lo, hi, 4);
-  const x = i => padL + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
+  // Position points along x by their actual time (if given) so a 6-day gap is
+  // six times wider than a 1-day gap; otherwise fall back to even spacing.
+  const useTime = points.every(p => typeof p.t === 'number');
+  const ts = useTime ? points.map(p => p.t) : [];
+  const tMin = useTime ? Math.min(...ts) : 0, tMax = useTime ? Math.max(...ts) : 0;
+  const x = (p, i) => {
+    if (points.length === 1) return padL + plotW / 2;
+    if (useTime) return padL + (tMax === tMin ? plotW / 2 : ((p.t - tMin) / (tMax - tMin)) * plotW);
+    return padL + (i / (points.length - 1)) * plotW;
+  };
   const y = v => padT + plotH - ((v - min) / (max - min)) * plotH;
 
   const grid = cssVar('--border', '#e2e2e2');
@@ -93,18 +102,18 @@ export function lineChart(canvas, points, { goal = null } = {}) {
   ctx.strokeStyle = accent;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  points.forEach((p, i) => { i === 0 ? ctx.moveTo(x(i), y(p.value)) : ctx.lineTo(x(i), y(p.value)); });
+  points.forEach((p, i) => { i === 0 ? ctx.moveTo(x(p, i), y(p.value)) : ctx.lineTo(x(p, i), y(p.value)); });
   ctx.stroke();
 
   // dots
   ctx.fillStyle = accent;
-  points.forEach((p, i) => { ctx.beginPath(); ctx.arc(x(i), y(p.value), 3, 0, Math.PI * 2); ctx.fill(); });
+  points.forEach((p, i) => { ctx.beginPath(); ctx.arc(x(p, i), y(p.value), 3, 0, Math.PI * 2); ctx.fill(); });
 
   // x labels (first, middle, last)
   ctx.fillStyle = text;
   ctx.textAlign = 'center';
   const idxs = points.length <= 2 ? points.map((_, i) => i) : [0, Math.floor((points.length - 1) / 2), points.length - 1];
-  idxs.forEach(i => ctx.fillText(points[i].label, x(i), h - 6));
+  idxs.forEach(i => ctx.fillText(points[i].label, x(points[i], i), h - 6));
 }
 
 // points: [{ label, value }]. goal (optional) tints bars over goal.
