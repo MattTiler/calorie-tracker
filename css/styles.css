@@ -102,11 +102,18 @@ button { font-family: inherit; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; width: 100%; }
 .cal-dowlabel { text-align: center; font-size: .7rem; color: var(--muted); padding-bottom: 4px; }
 .cal-cell {
+  position: relative;
   aspect-ratio: 1; min-width: 0; appearance: none; -webkit-appearance: none; padding: 0; margin: 0;
   display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; color: var(--text);
   border-radius: 9px; font-size: .92rem; cursor: pointer;
 }
+/* dot marking days that already have a weigh-in */
+.cal-cell.has-data::after {
+  content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+}
+.cal-cell.sel.has-data::after { background: #fff; }
 .cal-cell.empty { visibility: hidden; }
 .cal-cell.today { border: 1px solid var(--accent); }
 .cal-cell.sel { background: var(--accent); color: #fff; font-weight: 700; }

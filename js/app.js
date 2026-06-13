@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v38';
+const APP_VERSION = '0.39';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -788,6 +788,68 @@ function ingredientGrams(food) {
   };
 }
 
+// Log/edit a weight: pick a day on a calendar, then enter the weight. Selecting a
+// day that already has a weigh-in pre-fills its value, so you can see and change it.
+function openWeightLogger(weightsByDate) {
+  const max = todayStr(); // no future weigh-ins
+  let selected = todayStr();
+  const start = parseISO(selected);
+  let vy = start.getFullYear(), vm = start.getMonth();
+
+  const body = openModal('Log weight', `
+    <div id="wcal"></div>
+    <div class="field" style="margin-top:14px">
+      <label>Weight (kg) · <span id="w-when"></span></label>
+      <input id="w-input" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 78.5" />
+    </div>
+    <button class="btn btn-primary btn-block" id="w-confirm">Log weight</button>`);
+
+  const sync = () => {
+    const existing = weightsByDate[selected];
+    $('#w-input', body).value = existing != null ? existing : '';
+    $('#w-when', body).textContent = selected === todayStr()
+      ? 'today'
+      : parseISO(selected).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const draw = () => {
+    const first = new Date(vy, vm, 1);
+    const pad = (first.getDay() + 6) % 7;
+    const days = new Date(vy, vm + 1, 0).getDate();
+    const canNext = toISO(new Date(vy, vm + 1, 1)) <= max;
+    const items = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => `<span class="cal-dowlabel">${d}</span>`);
+    for (let i = 0; i < pad; i++) items.push('<span class="cal-cell empty"></span>');
+    for (let d = 1; d <= days; d++) {
+      const iso = toISO(new Date(vy, vm, d));
+      const off = iso > max;
+      const cls = ['cal-cell'];
+      if (off) cls.push('disabled');
+      if (iso === todayStr()) cls.push('today');
+      if (iso === selected) cls.push('sel');
+      if (weightsByDate[iso] != null) cls.push('has-data');
+      items.push(`<button class="${cls.join(' ')}" ${off ? 'disabled' : `data-iso="${iso}"`}>${d}</button>`);
+    }
+    $('#wcal', body).innerHTML = `
+      <div class="cal-head">
+        <button class="icon-btn" id="wc-prev" aria-label="Previous month">‹</button>
+        <span class="cal-month">${first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span>
+        <button class="icon-btn" id="wc-next" aria-label="Next month" ${canNext ? '' : 'disabled'}>›</button>
+      </div>
+      <div class="cal-grid">${items.join('')}</div>`;
+    $('#wc-prev', body).onclick = () => { if (--vm < 0) { vm = 11; vy--; } draw(); };
+    if (canNext) $('#wc-next', body).onclick = () => { if (++vm > 11) { vm = 0; vy++; } draw(); };
+    $$('.cal-cell[data-iso]', body).forEach(c => c.onclick = () => { selected = c.dataset.iso; draw(); sync(); });
+  };
+
+  draw(); sync();
+  $('#w-confirm', body).onclick = async () => {
+    const val = parseFloat($('#w-input', body).value);
+    if (!val || val <= 0) return showToast('Enter a weight');
+    await DB.put('weights', { date: selected, weight: round1(val) });
+    closeModal(); showToast('Weight logged'); renderTrends();
+  };
+}
+
 // ================================================================ TRENDS
 // Weight chart time windows. `days: null` = everything.
 // mode 'daily' = one point per day (gaps interpolated); 'sample' = N even points.
@@ -856,6 +918,7 @@ function sampleWindow(points, windowDays, n) {
 async function renderTrends() {
   const view = $('#view');
   const weights = (await DB.getAll('weights')).sort((a, b) => a.date.localeCompare(b.date));
+  const weightsByDate = Object.fromEntries(weights.map(w => [w.date, w.weight]));
 
   // last 14 days of calories
   const days = [];
@@ -883,11 +946,7 @@ async function renderTrends() {
       <div class="chips" id="weight-ranges">${WEIGHT_RANGES.map(r =>
         `<button class="chip${r.key === weightRange ? ' active' : ''}" data-range="${r.key}">${r.key}</button>`).join('')}</div>
       <canvas id="weight-chart"></canvas>
-      <div class="field-row" style="margin-top:14px">
-        <div class="field"><label>Weight (kg)</label><input id="w-val" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 78.5" /></div>
-        <div class="field"><label>Date</label><input id="w-date" type="date" value="${todayStr()}" /></div>
-      </div>
-      <button class="btn btn-primary btn-block" id="w-add">Log weight</button>
+      <button class="btn btn-primary btn-block" id="w-add" style="margin-top:14px">＋ Log weight</button>
     </div>
 
     ${weights.length ? `<div class="section-title">Weight history</div><div class="card"><ul class="list">${
@@ -918,13 +977,7 @@ async function renderTrends() {
     drawWeight();
   });
 
-  $('#w-add').onclick = async () => {
-    const val = parseFloat($('#w-val').value);
-    const date = $('#w-date').value;
-    if (!val || val <= 0 || !date) return showToast('Enter weight and date');
-    await DB.put('weights', { date, weight: round1(val) });
-    showToast('Weight logged'); renderTrends();
-  };
+  $('#w-add').onclick = () => openWeightLogger(weightsByDate);
   $$('.w-del', view).forEach(b => b.onclick = async () => {
     await DB.delete('weights', b.dataset.date); showToast('Removed'); renderTrends();
   });
