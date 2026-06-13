@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v22';
+const APP_VERSION = 'v23';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -472,11 +472,11 @@ function renderFoods() {
 
   const view = $('#view');
   view.innerHTML = `
+    <div class="section-title">Search foods</div>
     <div class="chips">
       <button class="chip" id="food-scan">📷 Scan barcode</button>
       <button class="chip" id="food-manual">✎ Add manually</button>
     </div>
-    <div class="section-title">Your foods</div>
     <div class="search-box"><input id="food-search" placeholder="Search a product or food…" autocomplete="off" /></div>
     <div class="card hidden" id="food-list-card"><ul class="list" id="food-list"></ul></div>
     <div id="food-online-results"></div>`;
@@ -669,8 +669,8 @@ function renderMealBuilder(isEdit) {
 
 function pickIngredient() {
   const body = openModal('Add ingredient', `
+    <div class="section-title">Search foods</div>
     <div class="chips"><button class="chip" id="ing-scan">📷 Scan barcode</button></div>
-    <div class="section-title">Your foods</div>
     <div class="search-box"><input id="ing-search" placeholder="Search a product or food…" autocomplete="off" /></div>
     <div id="ing-results"></div>
     <div id="ing-online-results"></div>`);
