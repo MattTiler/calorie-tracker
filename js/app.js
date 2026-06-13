@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v0.42';
+const APP_VERSION = 'v0.43';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -1039,7 +1039,8 @@ async function renderSettings() {
   const statsRows = stats ? `
       <div class="stat-row"><span>Calories logged all-time</span><strong>${kcal(stats.totalKcal)}</strong></div>
       <div class="stat-row"><span>Average per logged day</span><strong>${kcal(stats.avgPerLoggedDay)}</strong></div>
-      ${stats.topFoods.map((f, i) => `<div class="stat-row"><span>${i === 0 ? 'Most-logged foods' : ''} <span class="tiny muted">#${i + 1}</span></span><strong>${esc(f.name)} ×${f.count}</strong></div>`).join('')}
+      <div class="stat-row"><span>Most-logged foods</span></div>
+      ${stats.topFoods.map((f, i) => `<div class="stat-row"><span class="tiny muted">#${i + 1}</span><strong>${esc(f.name)} ×${f.count}</strong></div>`).join('')}
       <div class="stat-row"><span>Biggest day</span><strong>${kcal(stats.biggestDay.kcal)} · ${prettyDate(stats.biggestDay.date)}</strong></div>
       <div class="stat-row"><span>Biggest single item</span><strong>${esc(stats.biggestItem.name)} · ${kcal(stats.biggestItem.kcal)}</strong></div>
       <div class="stat-row"><span>Days logged</span><strong>${stats.daysWithData} of ${stats.spanDays}</strong></div>`
@@ -1073,7 +1074,8 @@ async function renderSettings() {
     <div class="card">
       <h3>Stats</h3>
       ${statsRows}
-      <div class="tiny muted" style="margin-top:10px">${state.foods.length} foods · ${state.meals.length} meals saved</div>
+      <div class="stat-row"><span>Foods saved</span><strong>${state.foods.length}</strong></div>
+      <div class="stat-row"><span>Meals saved</span><strong>${state.meals.length}</strong></div>
     </div>
 
     <p class="tiny muted" style="text-align:center">Calorie Tracker · ${APP_VERSION}<br>

@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#2e7d32"/>
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
   <!-- apple body: three overlapping circles (two top lobes + body) -->
-  <g fill="#f6f8f4">
+  <g fill="#e53935">
     <circle cx="205" cy="256" r="92"/>
     <circle cx="307" cy="256" r="92"/>
     <circle cx="256" cy="297" r="118"/>
   </g>
   <!-- tick -->
-  <path d="M210 282 L243 320 L322 236" fill="none" stroke="#2e7d32"
+  <path d="M210 282 L243 320 L322 236" fill="none" stroke="#ffffff"
         stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
   <!-- leaf + stalk -->
   <ellipse cx="294" cy="136" rx="46" ry="20" fill="#9ccc65" transform="rotate(-35 294 136)"/>
