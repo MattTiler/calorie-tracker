@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v35';
+const APP_VERSION = 'v36';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -833,18 +833,22 @@ function fillDaily(points, windowDays) {
   return out;
 }
 
-// Resample a time-sorted [{t, value}] series to `n` evenly-spaced points.
-function resampleByTime(points, n) {
-  const t0 = points[0].t, t1 = points[points.length - 1].t;
-  if (t1 === t0) return points;
+// Sample `n` evenly-spaced points across the view's window (clamped to start at
+// the first weigh-in, ending today), interpolating from ALL weigh-ins — so a
+// point just outside the window still anchors the start of the line.
+function sampleWindow(points, windowDays, n) {
+  if (points.length < 2) return points;
+  const today = todayStr();
+  const firstT = points[0].t;
+  const windowStartT = windowDays == null ? firstT : parseISO(addDays(today, -(windowDays - 1))).getTime();
+  const startT = Math.max(firstT, windowStartT);
+  const endT = Math.max(parseISO(today).getTime(), points[points.length - 1].t);
+  if (endT <= startT) return points.filter(p => p.t >= startT);
   const out = [];
   for (let i = 0; i < n; i++) {
-    const t = t0 + (t1 - t0) * (i / (n - 1));
-    out.push({
-      t,
-      value: interpAt(points, t),
-      label: new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
-    });
+    const t = startT + (endT - startT) * (i / (n - 1));
+    const value = interpAt(points, t);
+    if (value != null) out.push({ t, value, label: new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) });
   }
   return out;
 }
@@ -898,16 +902,12 @@ async function renderTrends() {
     let pts, dots = r.dots;
     if (r.mode === 'daily') {
       pts = fillDaily(wPoints, r.days); // uses all weigh-ins as anchors, even before the window
+    } else if (wPoints.length >= 2) {
+      // As many even points as the screen can show (~1 per 4px), for a smooth line.
+      const cw = $('#weight-chart').getBoundingClientRect().width || 320;
+      pts = sampleWindow(wPoints, r.days, Math.min(200, Math.max(30, Math.round((cw - 52) / 4))));
     } else {
-      const cutoff = r.days == null ? -Infinity : parseISO(addDays(todayStr(), -r.days)).getTime();
-      const inRange = wPoints.filter(p => p.t >= cutoff);
-      if (inRange.length >= 3) {
-        // As many even points as the screen can show (~1 per 4px), for a smooth line.
-        const cw = $('#weight-chart').getBoundingClientRect().width || 320;
-        pts = resampleByTime(inRange, Math.min(200, Math.max(30, Math.round((cw - 52) / 4))));
-      } else {
-        pts = inRange; dots = true; // too few to resample — just show the points
-      }
+      pts = wPoints; dots = true; // too few to sample — just show the points
     }
     lineChart($('#weight-chart'), pts, { dots });
   };
