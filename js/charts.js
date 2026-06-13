@@ -208,13 +208,17 @@ export function macroChart(canvas, points, { tolerance = 15, onSelect = null } =
   const muted = cssVar('--muted', '#777');
   const ok = cssVar('--ok', '#2e7d32'), warn = cssVar('--warn', '#d98324'), danger = cssVar('--danger', '#c62828');
   const band = cssVar('--accent-soft', '#e6f0e6');
+  const warnBand = cssVar('--warn-soft', '#f7e3c8');
   const colorFor = d => { const a = Math.abs(d); return a <= tolerance ? ok : a <= tolerance * 2 ? warn : danger; };
   const colW = plotW / points.length;
   const cx = i => padL + (i + 0.5) * colW;
 
   const draw = (sel) => {
     ctx.clearRect(0, 0, w, h);
-    // green on-target band
+    // bands: amber tolerance rings (±15–30%), then green on-target centre (±15%)
+    ctx.fillStyle = warnBand;
+    ctx.fillRect(padL, y(tolerance * 2), plotW, y(tolerance) - y(tolerance * 2));
+    ctx.fillRect(padL, y(-tolerance), plotW, y(-tolerance * 2) - y(-tolerance));
     ctx.fillStyle = band;
     ctx.fillRect(padL, y(tolerance), plotW, y(-tolerance) - y(tolerance));
     // target (centre) line

@@ -9,6 +9,7 @@
   --danger: #c62828;
   --ok: #2e7d32;     /* on target */
   --warn: #d98324;   /* getting off target */
+  --warn-soft: #f7e3c8;
   --protein: #3f7cac;
   --carbs: #e0a82e;
   --fat: #c8553d;
@@ -20,7 +21,7 @@
   :root {
     --bg: #14160f; --card: #1e2118; --text: #eef0ea; --muted: #9aa18f;
     --border: #2c3025; --accent: #6bbf59; --accent-soft: #24301f;
-    --ok: #6bbf59; --warn: #e0a93f;
+    --ok: #6bbf59; --warn: #e0a93f; --warn-soft: #332a16;
   }
 }
 
