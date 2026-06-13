@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v18';
+const APP_VERSION = 'v19';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -277,26 +277,15 @@ async function renderToday() {
       <div class="tiny muted">${goal ? `/ ${goal}g` : ''}${extra ? `${goal ? ' · ' : ''}${extra}` : ''}</div>
     </div>`;
 
-  // fibre = aim to reach goal; salt = stay under limit (turns red when over)
-  const saltOver = total.salt > g.salt;
-  const extraStat = (cls, label, val, goal, isLimit) => `
+  // fibre = aim to reach goal; sugars/sat fat/salt = stay under a limit (red when over)
+  const extraStat = (cls, label, val, goal, isLimit) => {
+    const over = isLimit && goal && val > goal;
+    return `
     <div class="macro ${cls}">
       <div class="mlabel">${label}</div>
-      <div class="mval"${isLimit && saltOver ? ' style="color:var(--danger)"' : ''}>${round1(val)}g</div>
-      <div class="mbar"><span style="width:${goal ? Math.min(100, (val / goal) * 100) : 0}%;${isLimit && saltOver ? 'background:var(--danger)' : ''}"></span></div>
+      <div class="mval"${over ? ' style="color:var(--danger)"' : ''}>${round1(val)}g</div>
+      <div class="mbar"><span style="width:${goal ? Math.min(100, (val / goal) * 100) : 0}%;${over ? 'background:var(--danger)' : ''}"></span></div>
       <div class="tiny muted">${isLimit ? `limit ${goal}g` : `aim ${goal}g`}</div>
-    </div>`;
-
-  // sub-macro tile (sugars under carbs, sat fat under fat): a limit bar that
-  // shares the parent macro's colour and turns red when over the limit.
-  const subMacro = (cls, label, val, goal, parent) => {
-    const isOver = goal && val > goal;
-    return `
-    <div class="macro sub ${cls}">
-      <div class="mlabel">↳ ${label}</div>
-      <div class="mval"${isOver ? ' style="color:var(--danger)"' : ''}>${round1(val)}g</div>
-      <div class="mbar"><span style="width:${goal ? Math.min(100, (val / goal) * 100) : 0}%;${isOver ? 'background:var(--danger)' : ''}"></span></div>
-      <div class="tiny muted">limit ${goal}g · ${parent}</div>
     </div>`;
   };
 
@@ -313,17 +302,14 @@ async function renderToday() {
       <div class="progress ${over ? 'over' : ''}"><span style="width:${pct}%"></span></div>
       <div class="macros">
         ${macroBar('p', 'Protein', total.protein, g.protein)}
-        ${macroBar('c', 'Carbs', total.carbs, g.carbs)}
-        ${macroBar('f', 'Fat', total.fat, g.fat)}
-      </div>
-      <div class="macros submacros">
-        <div></div>
-        ${subMacro('c', 'Sugars', total.sugars, g.sugars, 'of carbs')}
-        ${subMacro('f', 'Sat fat', total.satFat, g.satFat, 'of fat')}
-      </div>
-      <div class="macros" style="grid-template-columns:repeat(2,1fr)">
         ${extraStat('p', 'Fibre', total.fibre, g.fibre, false)}
         ${extraStat('f', 'Salt', total.salt, g.salt, true)}
+      </div>
+      <div class="macros" style="grid-template-columns:repeat(2,1fr)">
+        ${macroBar('c', 'Carbs', total.carbs, g.carbs)}
+        ${macroBar('f', 'Fat', total.fat, g.fat)}
+        ${extraStat('c', 'Sugars', total.sugars, g.sugars, true)}
+        ${extraStat('f', 'Sat fat', total.satFat, g.satFat, true)}
       </div>
     </div>
 

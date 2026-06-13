@@ -109,11 +109,6 @@ button { font-family: inherit; }
 .macro.p .mbar > span { background: var(--protein); }
 .macro.c .mbar > span { background: var(--carbs); }
 .macro.f .mbar > span { background: var(--fat); }
-/* sub-macros: nested under their parent, visually subordinate */
-.submacros { margin-top: 8px; }
-.macro.sub .mlabel { text-transform: none; letter-spacing: 0; }
-.macro.sub .mval { font-size: .95rem; font-weight: 600; }
-.macro.sub .mbar > span { opacity: .55; }
 
 /* Lists */
 .list { list-style: none; padding: 0; margin: 0; }
