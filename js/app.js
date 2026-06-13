@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v26';
+const APP_VERSION = 'v27';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -35,9 +35,11 @@ function dayNavLabel(s) {
   return s === todayStr() ? `${d} (Today)` : d;
 }
 
-// You can look back freely but only a few days ahead.
+// You can look back up to a year, and only a few days ahead.
 const MAX_FUTURE_DAYS = 3;
+const MAX_PAST_DAYS = 365;
 const maxLogDate = () => addDays(todayStr(), MAX_FUTURE_DAYS);
+const minLogDate = () => addDays(todayStr(), -MAX_PAST_DAYS);
 
 // All tracked per-100g nutrient keys (kcal + macros + extras).
 const NUTRIENTS = ['kcal', 'protein', 'carbs', 'fat', 'satFat', 'sugars', 'fibre', 'salt'];
@@ -301,7 +303,7 @@ async function renderToday() {
 
   view.innerHTML = `
     <div class="date-nav">
-      <button class="icon-btn" id="prev-day" aria-label="Previous day">‹</button>
+      <button class="icon-btn" id="prev-day" aria-label="Previous day" ${state.date <= minLogDate() ? 'disabled' : ''}>‹</button>
       <span class="date-label">${dayNavLabel(state.date)}</span>
       <button class="icon-btn" id="next-day" aria-label="Next day" ${state.date >= maxLogDate() ? 'disabled' : ''}>›</button>
     </div>
@@ -335,7 +337,10 @@ async function renderToday() {
   $('#header-actions').innerHTML = `<button class="icon-btn" id="cal-day" aria-label="Pick a date">📅</button>`;
   $('#cal-day').onclick = openDatePicker;
 
-  $('#prev-day').onclick = () => { state.date = addDays(state.date, -1); renderToday(); };
+  $('#prev-day').onclick = () => {
+    if (state.date <= minLogDate()) return; // capped a year back
+    state.date = addDays(state.date, -1); renderToday();
+  };
   $('#next-day').onclick = () => {
     if (state.date >= maxLogDate()) return; // capped a few days ahead
     state.date = addDays(state.date, 1); renderToday();
@@ -351,46 +356,53 @@ async function renderToday() {
   $$('.log-row[data-kind="food"]', view).forEach(row => row.onclick = () => editFoodLogEntry(Number(row.dataset.id)));
 }
 
-// Custom month calendar so future dates past the limit are genuinely unselectable
-// (the native date picker on iOS ignores `max` and lets you spin to any year).
+// Custom month calendar so dates outside the allowed range are genuinely
+// unselectable (the native iOS picker ignores min/max and lets you spin freely).
+// Tap a day to highlight it, then Select to confirm — a misclick is recoverable.
 function openDatePicker() {
-  const max = maxLogDate();
+  const max = maxLogDate(), min = minLogDate();
   const start = parseISO(state.date);
   let vy = start.getFullYear(), vm = start.getMonth();
-  const body = openModal('Pick a date', '<div id="cal-wrap"></div>');
+  let selected = state.date;
+
+  const body = openModal('Pick a date', `
+    <div id="cal-wrap"></div>
+    <button class="btn btn-primary btn-block" id="cal-confirm" style="margin-top:14px">Select this day</button>`);
 
   const draw = () => {
     const first = new Date(vy, vm, 1);
     const pad = (first.getDay() + 6) % 7;            // Monday-first offset
     const days = new Date(vy, vm + 1, 0).getDate();
-    const canNext = toISO(new Date(vy, vm + 1, 1)) <= max; // next month has selectable days?
+    const canNext = toISO(new Date(vy, vm + 1, 1)) <= max;  // next month has selectable days?
+    const canPrev = toISO(new Date(vy, vm, 0)) >= min;      // prev month's last day still allowed?
 
-    const cells = [];
-    for (let i = 0; i < pad; i++) cells.push('<div class="cal-cell empty"></div>');
+    // One grid for weekday labels + days, so columns can never drift out of line.
+    const items = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => `<span class="cal-dowlabel">${d}</span>`);
+    for (let i = 0; i < pad; i++) items.push('<span class="cal-cell empty"></span>');
     for (let d = 1; d <= days; d++) {
       const iso = toISO(new Date(vy, vm, d));
+      const off = iso > max || iso < min;
       const cls = ['cal-cell'];
-      if (iso > max) cls.push('disabled');
+      if (off) cls.push('disabled');
       if (iso === todayStr()) cls.push('today');
-      if (iso === state.date) cls.push('sel');
-      cells.push(`<button class="${cls.join(' ')}" ${iso > max ? 'disabled' : `data-iso="${iso}"`}>${d}</button>`);
+      if (iso === selected) cls.push('sel');
+      items.push(`<button class="${cls.join(' ')}" ${off ? 'disabled' : `data-iso="${iso}"`}>${d}</button>`);
     }
 
     $('#cal-wrap', body).innerHTML = `
       <div class="cal-head">
-        <button class="icon-btn" id="cal-prev" aria-label="Previous month">‹</button>
+        <button class="icon-btn" id="cal-prev" aria-label="Previous month" ${canPrev ? '' : 'disabled'}>‹</button>
         <span class="cal-month">${first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span>
         <button class="icon-btn" id="cal-next" aria-label="Next month" ${canNext ? '' : 'disabled'}>›</button>
       </div>
-      <div class="cal-grid cal-dow">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => `<span class="cal-dowlabel">${d}</span>`).join('')}</div>
-      <div class="cal-grid">${cells.join('')}</div>`;
+      <div class="cal-grid">${items.join('')}</div>`;
 
-    $('#cal-prev', body).onclick = () => { if (--vm < 0) { vm = 11; vy--; } draw(); };
+    if (canPrev) $('#cal-prev', body).onclick = () => { if (--vm < 0) { vm = 11; vy--; } draw(); };
     if (canNext) $('#cal-next', body).onclick = () => { if (++vm > 11) { vm = 0; vy++; } draw(); };
-    $$('.cal-cell[data-iso]', body).forEach(c => c.onclick = () => {
-      state.date = c.dataset.iso; closeModal(); renderToday();
-    });
+    $$('.cal-cell[data-iso]', body).forEach(c => c.onclick = () => { selected = c.dataset.iso; draw(); });
   };
+
+  $('#cal-confirm', body).onclick = () => { state.date = selected; closeModal(); renderToday(); };
   draw();
 }
 

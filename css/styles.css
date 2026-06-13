@@ -94,11 +94,11 @@ button { font-family: inherit; }
 /* Custom date-picker calendar */
 .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .cal-month { font-weight: 600; font-size: 1.05rem; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.cal-dow { margin-bottom: 6px; }
-.cal-dowlabel { text-align: center; font-size: .7rem; color: var(--muted); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; width: 100%; }
+.cal-dowlabel { text-align: center; font-size: .7rem; color: var(--muted); padding-bottom: 4px; }
 .cal-cell {
-  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 1; min-width: 0; appearance: none; -webkit-appearance: none; padding: 0; margin: 0;
+  display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; color: var(--text);
   border-radius: 9px; font-size: .92rem; cursor: pointer;
 }
