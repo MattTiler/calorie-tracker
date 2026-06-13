@@ -128,16 +128,21 @@ export function lineChart(canvas, points, { goal = null, dots = true } = {}) {
 
 // points: [{ label, value, fullLabel? }]. goal tints over-goal bars and is labelled.
 // onTap(point, i) fires when a bar is tapped (that bar is highlighted).
-export function barChart(canvas, points, { goal = null, onTap = null } = {}) {
+export function barChart(canvas, points, { goal = null, onSelect = null } = {}) {
   const { ctx, w, h } = setupCanvas(canvas);
   if (!points.length) { ctx.clearRect(0, 0, w, h); drawEmpty(ctx, w, h); return; }
 
   const padL = 38, padR = 12, padT = 12, padB = 22;
   const plotW = w - padL - padR, plotH = h - padT - padB;
   const max = Math.max(...points.map(p => p.value), goal || 0, 1);
-  const accent = cssVar('--accent', '#2e7d32');
-  const over = cssVar('--danger', '#c62828');
   const text = cssVar('--muted', '#777');
+  const ok = cssVar('--ok', '#2e7d32'), warn = cssVar('--warn', '#d98324'), danger = cssVar('--danger', '#c62828');
+  // colour each bar green/amber/red by how close the day's total is to the goal
+  const barColor = (v) => {
+    if (!goal) return ok;
+    const pct = (v / goal) * 100;
+    return (pct < 70 || pct > 130) ? danger : (pct < 85 || pct > 115) ? warn : ok;
+  };
   const bw = plotW / points.length;
   const barW = Math.min(bw - 4, 56); // cap width so a few bars stay sensible and centred
 
@@ -145,7 +150,7 @@ export function barChart(canvas, points, { goal = null, onTap = null } = {}) {
     ctx.clearRect(0, 0, w, h);
     points.forEach((p, i) => {
       const bh = (p.value / max) * plotH;
-      ctx.fillStyle = (goal && p.value > goal) ? over : accent;
+      ctx.fillStyle = barColor(p.value);
       ctx.globalAlpha = sel == null || sel === i ? 1 : 0.4;
       ctx.fillRect(padL + i * bw + (bw - barW) / 2, padT + plotH - bh, barW, bh);
     });
@@ -169,11 +174,18 @@ export function barChart(canvas, points, { goal = null, onTap = null } = {}) {
   };
 
   draw(null);
-  if (onTap) {
+  if (onSelect) {
     canvas.onclick = (e) => {
       const rect = canvas.getBoundingClientRect();
-      const i = Math.floor((e.clientX - rect.left - padL) / bw);
-      if (i >= 0 && i < points.length) { draw(i); onTap(points[i], i); }
+      const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+      let hit = -1;
+      if (cy >= padT && cy <= padT + plotH) {
+        const i = Math.floor((cx - padL) / bw);
+        const barX = padL + i * bw + (bw - barW) / 2;
+        if (i >= 0 && i < points.length && cx >= barX && cx <= barX + barW) hit = i;
+      }
+      draw(hit < 0 ? null : hit);     // tapping a bar selects it; whitespace clears it
+      onSelect(hit < 0 ? null : points[hit]);
     };
   }
 }

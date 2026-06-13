@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v0.41';
+const APP_VERSION = 'v0.42';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -965,7 +965,11 @@ async function renderTrends() {
 
   barChart($('#cal-chart'), calPoints, {
     goal: state.goals.kcal,
-    onTap: (p) => { $('#cal-readout').textContent = `${p.fullLabel}: ${Math.round(p.value).toLocaleString()} kcal`; },
+    onSelect: (p) => {
+      $('#cal-readout').textContent = p
+        ? `${p.fullLabel}: ${Math.round(p.value).toLocaleString()} kcal`
+        : 'Tap a bar to see its calories';
+    },
   });
 
   const drawWeight = () => {
