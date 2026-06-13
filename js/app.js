@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v37';
+const APP_VERSION = 'v38';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -848,7 +848,7 @@ function sampleWindow(points, windowDays, n) {
   for (let i = 0; i < n; i++) {
     const t = startT + (endT - startT) * (i / (n - 1));
     const value = interpAt(points, t);
-    if (value != null) out.push({ t, value, label: new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) });
+    if (value != null) out.push({ t, value, label: new Date(t).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }) });
   }
   return out;
 }
@@ -892,7 +892,7 @@ async function renderTrends() {
 
     ${weights.length ? `<div class="section-title">Weight history</div><div class="card"><ul class="list">${
       weights.slice().reverse().map(w => `<li class="list-item">
-        <div class="li-main"><div class="li-title">${w.weight} kg</div><div class="li-sub">${prettyDate(w.date)}</div></div>
+        <div class="li-main"><div class="li-title">${w.weight} kg</div><div class="li-sub">${parseISO(w.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</div></div>
         <button class="icon-btn w-del" data-date="${w.date}" aria-label="Remove">✕</button></li>`).join('')}</ul></div>` : ''}`;
 
   barChart($('#cal-chart'), calPoints, { goal: state.goals.kcal });
