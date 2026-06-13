@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v29';
+const APP_VERSION = 'v30';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -27,6 +27,16 @@ function prettyDate(s) {
   if (s === addDays(t, -1)) return 'Yesterday';
   if (s === addDays(t, 1)) return 'Tomorrow';
   return parseISO(s).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+// Traffic-light colour for a bar by how close the value is to its target.
+// Green within ±15% of target, amber to ±30%, red beyond — same for every bar.
+function targetColor(val, target) {
+  if (!target) return 'var(--border)';
+  const pct = (val / target) * 100;
+  if (pct < 70 || pct > 130) return 'var(--danger)';
+  if (pct < 85 || pct > 115) return 'var(--warn)';
+  return 'var(--ok)';
 }
 
 // Label for the Log tab day switcher: always the date, with "(Today)" appended for today.
@@ -285,21 +295,18 @@ async function renderToday() {
     <div class="macro ${cls}">
       <div class="mlabel">${label}</div>
       <div class="mval">${round1(val)}g</div>
-      <div class="mbar"><span style="width:${goal ? Math.min(100, (val / goal) * 100) : 0}%"></span></div>
+      <div class="mbar"><span style="width:${goal ? Math.min(100, (val / goal) * 100) : 0}%;background:${targetColor(val, goal)}"></span></div>
       <div class="tiny muted">${goal ? `/ ${goal}g` : ''}${extra ? `${goal ? ' · ' : ''}${extra}` : ''}</div>
     </div>`;
 
   // fibre = aim to reach goal; sugars/sat fat/salt = stay under a limit (red when over)
-  const extraStat = (cls, label, val, goal, isLimit) => {
-    const over = isLimit && goal && val > goal;
-    return `
+  const extraStat = (cls, label, val, goal, isLimit) => `
     <div class="macro ${cls}">
       <div class="mlabel">${label}</div>
-      <div class="mval"${over ? ' style="color:var(--danger)"' : ''}>${round1(val)}g</div>
-      <div class="mbar"><span style="width:${goal ? Math.min(100, (val / goal) * 100) : 0}%;${over ? 'background:var(--danger)' : ''}"></span></div>
+      <div class="mval">${round1(val)}g</div>
+      <div class="mbar"><span style="width:${goal ? Math.min(100, (val / goal) * 100) : 0}%;background:${targetColor(val, goal)}"></span></div>
       <div class="tiny muted">${isLimit ? `limit ${goal}g` : `aim ${goal}g`}</div>
     </div>`;
-  };
 
   view.innerHTML = `
     <div class="date-nav">
@@ -311,7 +318,7 @@ async function renderToday() {
     <div class="card summary">
       <div class="big">${round(total.kcal)} <small>/ ${g.kcal} kcal</small></div>
       <div class="sub">${over ? `${round(-remaining)} kcal over goal` : `${round(remaining)} kcal remaining`}</div>
-      <div class="progress ${over ? 'over' : ''}"><span style="width:${pct}%"></span></div>
+      <div class="progress"><span style="width:${pct}%;background:${targetColor(total.kcal, g.kcal)}"></span></div>
       <div class="macros">
         ${macroBar('p', 'Protein', total.protein, g.protein)}
         ${extraStat('p', 'Fibre', total.fibre, g.fibre, false)}
