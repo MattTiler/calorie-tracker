@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v0.40';
+const APP_VERSION = 'v0.41';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -928,7 +928,15 @@ async function renderTrends() {
     const entries = await DB.getLogByDate(day);
     kcalByDay[day] = entries.reduce((s, e) => s + e.kcal, 0);
   }
-  const calPoints = days.map(d => ({ label: parseISO(d).toLocaleDateString(undefined, { day: 'numeric' }), value: kcalByDay[d] }));
+  // Trim to the span that actually has data so a few days fill/centre the chart
+  // instead of bunching on the right behind empty days.
+  const dataIdx = days.map((d, i) => (kcalByDay[d] > 0 ? i : -1)).filter(i => i >= 0);
+  const shownDays = dataIdx.length ? days.slice(dataIdx[0], dataIdx[dataIdx.length - 1] + 1) : [];
+  const calPoints = shownDays.map(d => ({
+    label: parseISO(d).toLocaleDateString(undefined, { day: 'numeric' }),
+    fullLabel: parseISO(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+    value: kcalByDay[d],
+  }));
   const wPoints = weights.map(w => ({ label: parseISO(w.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), value: w.weight, t: parseISO(w.date).getTime() }));
 
   const logged = days.filter(d => kcalByDay[d] > 0);
@@ -938,7 +946,8 @@ async function renderTrends() {
     <div class="card">
       <h3>Calories — last 14 days</h3>
       <canvas id="cal-chart"></canvas>
-      <div class="tiny muted" style="text-align:center;margin-top:8px">Avg on logged days: <b>${avg}</b> kcal · goal ${state.goals.kcal}</div>
+      <div class="tiny muted" id="cal-readout" style="text-align:center;margin-top:8px;min-height:1em">Tap a bar to see its calories</div>
+      <div class="tiny muted" style="text-align:center;margin-top:2px">Avg on logged days: <b>${avg}</b> kcal · goal ${state.goals.kcal}</div>
     </div>
 
     <div class="card">
@@ -954,7 +963,10 @@ async function renderTrends() {
         <div class="li-main"><div class="li-title">${w.weight} kg</div><div class="li-sub">${parseISO(w.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</div></div>
         <button class="icon-btn w-del" data-date="${w.date}" aria-label="Remove">✕</button></li>`).join('')}</ul></div>` : ''}`;
 
-  barChart($('#cal-chart'), calPoints, { goal: state.goals.kcal });
+  barChart($('#cal-chart'), calPoints, {
+    goal: state.goals.kcal,
+    onTap: (p) => { $('#cal-readout').textContent = `${p.fullLabel}: ${Math.round(p.value).toLocaleString()} kcal`; },
+  });
 
   const drawWeight = () => {
     const r = WEIGHT_RANGES.find(x => x.key === weightRange) || WEIGHT_RANGES[0];

@@ -126,52 +126,56 @@ export function lineChart(canvas, points, { goal = null, dots = true } = {}) {
   });
 }
 
-// points: [{ label, value }]. goal (optional) tints bars over goal.
-export function barChart(canvas, points, { goal = null } = {}) {
+// points: [{ label, value, fullLabel? }]. goal tints over-goal bars and is labelled.
+// onTap(point, i) fires when a bar is tapped (that bar is highlighted).
+export function barChart(canvas, points, { goal = null, onTap = null } = {}) {
   const { ctx, w, h } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, w, h);
-  if (!points.length) { drawEmpty(ctx, w, h); return; }
+  if (!points.length) { ctx.clearRect(0, 0, w, h); drawEmpty(ctx, w, h); return; }
 
-  const padL = 38, padR = 10, padT = 12, padB = 22;
+  const padL = 38, padR = 12, padT = 12, padB = 22;
   const plotW = w - padL - padR, plotH = h - padT - padB;
   const max = Math.max(...points.map(p => p.value), goal || 0, 1);
   const accent = cssVar('--accent', '#2e7d32');
   const over = cssVar('--danger', '#c62828');
   const text = cssVar('--muted', '#777');
-
-  ctx.fillStyle = text;
-  ctx.font = '11px system-ui, sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText(Math.round(max), padL - 6, padT + 8);
-
-  const gap = 4;
   const bw = plotW / points.length;
-  points.forEach((p, i) => {
-    const bh = (p.value / max) * plotH;
-    const bx = padL + i * bw + gap / 2;
-    const by = padT + plotH - bh;
-    ctx.fillStyle = (goal && p.value > goal) ? over : accent;
-    ctx.fillRect(bx, by, bw - gap, bh);
-  });
+  const barW = Math.min(bw - 4, 56); // cap width so a few bars stay sensible and centred
 
-  if (goal != null) {
-    const gy = padT + plotH - (goal / max) * plotH;
-    ctx.strokeStyle = text;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(padL, gy);
-    ctx.lineTo(w - padR, gy);
-    ctx.stroke();
-    ctx.setLineDash([]);
+  const draw = (sel) => {
+    ctx.clearRect(0, 0, w, h);
+    points.forEach((p, i) => {
+      const bh = (p.value / max) * plotH;
+      ctx.fillStyle = (goal && p.value > goal) ? over : accent;
+      ctx.globalAlpha = sel == null || sel === i ? 1 : 0.4;
+      ctx.fillRect(padL + i * bw + (bw - barW) / 2, padT + plotH - bh, barW, bh);
+    });
+    ctx.globalAlpha = 1;
+    ctx.font = '11px system-ui, sans-serif';
+    if (goal != null) {
+      const gy = padT + plotH - (goal / max) * plotH;
+      ctx.strokeStyle = text; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(w - padR, gy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = text; ctx.textAlign = 'right';
+      ctx.fillText(Math.round(goal), padL - 6, gy + 4); // label the target line
+    }
+    ctx.fillStyle = text;
+    const last = points.length - 1;
+    const idxs = points.length <= 2 ? points.map((_, i) => i) : [0, Math.floor(last / 2), last];
+    idxs.forEach(i => {
+      ctx.textAlign = i === 0 ? 'left' : i === last ? 'right' : 'center';
+      ctx.fillText(points[i].label, padL + i * bw + bw / 2, h - 6);
+    });
+  };
+
+  draw(null);
+  if (onTap) {
+    canvas.onclick = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const i = Math.floor((e.clientX - rect.left - padL) / bw);
+      if (i >= 0 && i < points.length) { draw(i); onTap(points[i], i); }
+    };
   }
-
-  ctx.fillStyle = text;
-  const last = points.length - 1;
-  const idxs = points.length <= 2 ? points.map((_, i) => i) : [0, Math.floor(last / 2), last];
-  idxs.forEach(i => {
-    ctx.textAlign = i === 0 ? 'left' : i === last ? 'right' : 'center';
-    ctx.fillText(points[i].label, padL + i * bw + bw / 2, h - 6);
-  });
 }
 
 function drawEmpty(ctx, w, h) {
