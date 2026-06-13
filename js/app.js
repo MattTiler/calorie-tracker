@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v0.43';
+const APP_VERSION = 'v0.44';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
