@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v27';
+const APP_VERSION = 'v28';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -367,7 +367,7 @@ function openDatePicker() {
 
   const body = openModal('Pick a date', `
     <div id="cal-wrap"></div>
-    <button class="btn btn-primary btn-block" id="cal-confirm" style="margin-top:14px">Select this day</button>`);
+    <button class="btn btn-primary btn-block" id="cal-confirm" style="margin-top:14px">Select</button>`);
 
   const draw = () => {
     const first = new Date(vy, vm, 1);
