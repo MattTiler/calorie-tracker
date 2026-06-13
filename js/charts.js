@@ -47,7 +47,7 @@ export function lineChart(canvas, points, { goal = null, dots = true } = {}) {
   ctx.clearRect(0, 0, w, h);
   if (!points.length) { drawEmpty(ctx, w, h); return; }
 
-  const padL = 42, padR = 10, padT = 12, padB = 22;
+  const padL = 42, padR = 16, padT = 12, padB = 22;
   const plotW = w - padL - padR, plotH = h - padT - padB;
   const values = points.map(p => p.value);
   // Scale to the data range (not 0) so small changes are visible, rounded to
@@ -116,11 +116,14 @@ export function lineChart(canvas, points, { goal = null, dots = true } = {}) {
     });
   }
 
-  // x labels (first, middle, last)
+  // x labels (first, middle, last) — anchor the ends inward so they aren't clipped
   ctx.fillStyle = text;
-  ctx.textAlign = 'center';
-  const idxs = points.length <= 2 ? points.map((_, i) => i) : [0, Math.floor((points.length - 1) / 2), points.length - 1];
-  idxs.forEach(i => ctx.fillText(points[i].label, x(points[i], i), h - 6));
+  const last = points.length - 1;
+  const idxs = points.length <= 2 ? points.map((_, i) => i) : [0, Math.floor(last / 2), last];
+  idxs.forEach(i => {
+    ctx.textAlign = i === 0 ? 'left' : i === last ? 'right' : 'center';
+    ctx.fillText(points[i].label, x(points[i], i), h - 6);
+  });
 }
 
 // points: [{ label, value }]. goal (optional) tints bars over goal.
@@ -163,9 +166,12 @@ export function barChart(canvas, points, { goal = null } = {}) {
   }
 
   ctx.fillStyle = text;
-  ctx.textAlign = 'center';
-  const idxs = points.length <= 2 ? points.map((_, i) => i) : [0, Math.floor((points.length - 1) / 2), points.length - 1];
-  idxs.forEach(i => ctx.fillText(points[i].label, padL + i * bw + bw / 2, h - 6));
+  const last = points.length - 1;
+  const idxs = points.length <= 2 ? points.map((_, i) => i) : [0, Math.floor(last / 2), last];
+  idxs.forEach(i => {
+    ctx.textAlign = i === 0 ? 'left' : i === last ? 'right' : 'center';
+    ctx.fillText(points[i].label, padL + i * bw + bw / 2, h - 6);
+  });
 }
 
 function drawEmpty(ctx, w, h) {
