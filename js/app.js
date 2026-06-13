@@ -1,11 +1,11 @@
 // app.js — Calorie Tracker main application.
 import { DB } from './db.js';
-import { lineChart, barChart } from './charts.js';
+import { lineChart, barChart, macroChart } from './charts.js';
 import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v0.48';
+const APP_VERSION = 'v0.49';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -875,6 +875,26 @@ const WEIGHT_RANGES = [
   { key: 'All', days: null, mode: 'sample', dots: false },
 ];
 let weightRange = '1M';
+let macroRange = '1M';
+
+// Average each macro over the logged days in the window and express it as a
+// percentage over/under its daily target (0 = on target) for the diverging chart.
+function macroPoints(macroByDate, goals, windowDays) {
+  const cutoff = windowDays == null ? null : addDays(todayStr(), -windowDays);
+  const dates = Object.keys(macroByDate).filter(d => cutoff == null || d >= cutoff);
+  const n = dates.length;
+  const MACROS = [
+    ['kcal', 'Cal', 'Calories', 'kcal'], ['protein', 'Pro', 'Protein', 'g'],
+    ['carbs', 'Carb', 'Carbs', 'g'], ['fat', 'Fat', 'Fat', 'g'],
+    ['sugars', 'Sug', 'Sugars', 'g'], ['satFat', 'Sat', 'Sat fat', 'g'],
+    ['fibre', 'Fib', 'Fibre', 'g'], ['salt', 'Salt', 'Salt', 'g'],
+  ];
+  return MACROS.map(([key, label, fullLabel, unit]) => {
+    const target = goals[key] || 0;
+    const avg = n ? dates.reduce((s, d) => s + (macroByDate[d][key] || 0), 0) / n : 0;
+    return { key, label, fullLabel, unit, target, avg, dev: target ? (avg / target - 1) * 100 : 0, n };
+  });
+}
 
 // Value on the weigh-in line at time `td`: interpolate between the surrounding
 // weigh-ins; hold flat after the last; null before the first (sorted asc by t).
@@ -934,6 +954,13 @@ async function renderTrends() {
   const weights = (await DB.getAll('weights')).sort((a, b) => a.date.localeCompare(b.date));
   const weightsByDate = Object.fromEntries(weights.map(w => [w.date, w.weight]));
 
+  // per-day macro totals (for the macros-vs-target widget), keyed by date
+  const macroByDate = {};
+  for (const e of await DB.getAll('log')) {
+    const m = macroByDate[e.date] || (macroByDate[e.date] = zeroNutrients());
+    for (const k of NUTRIENTS) m[k] += (e[k] || 0);
+  }
+
   // last 14 days of calories
   const days = [];
   for (let i = 13; i >= 0; i--) days.push(addDays(todayStr(), -i));
@@ -965,6 +992,14 @@ async function renderTrends() {
     </div>
 
     <div class="card">
+      <h3>Macros vs target</h3>
+      <div class="chips" id="macro-ranges">${WEIGHT_RANGES.map(r =>
+        `<button class="chip${r.key === macroRange ? ' active' : ''}" data-range="${r.key}">${r.key}</button>`).join('')}</div>
+      <canvas id="macro-chart"></canvas>
+      <div class="tiny muted" id="macro-readout" style="text-align:center;margin-top:8px;min-height:1em">Tap a macro for details · dot above = over, below = under</div>
+    </div>
+
+    <div class="card">
       <h3>Weight over time</h3>
       <div class="chips" id="weight-ranges">${WEIGHT_RANGES.map(r =>
         `<button class="chip${r.key === weightRange ? ' active' : ''}" data-range="${r.key}">${r.key}</button>`).join('')}</div>
@@ -984,6 +1019,23 @@ async function renderTrends() {
         ? `${p.fullLabel}: ${Math.round(p.value).toLocaleString()} kcal`
         : 'Tap a bar to see its calories';
     },
+  });
+
+  const drawMacros = () => {
+    const r = WEIGHT_RANGES.find(x => x.key === macroRange) || WEIGHT_RANGES[0];
+    macroChart($('#macro-chart'), macroPoints(macroByDate, state.goals, r.days), {
+      onSelect: (p) => {
+        $('#macro-readout').textContent = p
+          ? `${p.fullLabel}: avg ${round1(p.avg)}${p.unit} vs ${round(p.target)}${p.unit} target (${p.dev >= 0 ? '+' : ''}${Math.round(p.dev)}%)`
+          : 'Tap a macro for details · dot above = over, below = under';
+      },
+    });
+  };
+  drawMacros();
+  $$('#macro-ranges .chip', view).forEach(b => b.onclick = () => {
+    macroRange = b.dataset.range;
+    $$('#macro-ranges .chip', view).forEach(c => c.classList.toggle('active', c.dataset.range === macroRange));
+    drawMacros();
   });
 
   const drawWeight = () => {

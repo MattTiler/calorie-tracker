@@ -190,6 +190,67 @@ export function barChart(canvas, points, { goal = null, onSelect = null } = {}) 
   }
 }
 
+// points: [{ label, dev, ... }] where dev = average % over/under target.
+// Lollipop dots over a shaded green on-target band (±tolerance%); tapping a
+// column highlights it and fires onSelect(point|null).
+export function macroChart(canvas, points, { tolerance = 15, onSelect = null } = {}) {
+  const { ctx, w, h } = setupCanvas(canvas);
+  ctx.clearRect(0, 0, w, h);
+  if (!points.length || !points[0].n) { drawEmpty(ctx, w, h); return; }
+
+  const padL = 44, padR = 12, padT = 14, padB = 22;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const cy = padT + plotH / 2;
+  const maxAbs = Math.max(20, ...points.map(p => Math.abs(p.dev)));
+  const axisMax = Math.min(100, Math.max(30, Math.ceil(maxAbs / 10) * 10));
+  const y = dev => cy - (Math.max(-axisMax, Math.min(axisMax, dev)) / axisMax) * (plotH / 2);
+
+  const muted = cssVar('--muted', '#777');
+  const ok = cssVar('--ok', '#2e7d32'), warn = cssVar('--warn', '#d98324'), danger = cssVar('--danger', '#c62828');
+  const band = cssVar('--accent-soft', '#e6f0e6');
+  const colorFor = d => { const a = Math.abs(d); return a <= tolerance ? ok : a <= tolerance * 2 ? warn : danger; };
+  const colW = plotW / points.length;
+  const cx = i => padL + (i + 0.5) * colW;
+
+  const draw = (sel) => {
+    ctx.clearRect(0, 0, w, h);
+    // green on-target band
+    ctx.fillStyle = band;
+    ctx.fillRect(padL, y(tolerance), plotW, y(-tolerance) - y(tolerance));
+    // target (centre) line
+    ctx.strokeStyle = muted; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, cy); ctx.lineTo(w - padR, cy); ctx.stroke();
+    // axis labels
+    ctx.fillStyle = muted; ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText('+' + axisMax + '%', padL - 6, padT + 9);
+    ctx.fillText('target', padL - 6, cy + 4);
+    ctx.fillText('−' + axisMax + '%', padL - 6, padT + plotH);
+    // lollipops
+    points.forEach((p, i) => {
+      const x = cx(i), yy = y(p.dev), c = colorFor(p.dev);
+      ctx.globalAlpha = sel == null || sel === i ? 1 : 0.4;
+      ctx.strokeStyle = c; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x, yy); ctx.stroke();
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(x, yy, sel === i ? 7 : 5, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = muted; ctx.font = '10px system-ui, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(p.label, x, h - 6);
+    });
+  };
+
+  draw(null);
+  if (onSelect) {
+    canvas.onclick = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const i = Math.floor((e.clientX - rect.left - padL) / colW);
+      const hit = (i >= 0 && i < points.length) ? i : -1;
+      draw(hit < 0 ? null : hit);
+      onSelect(hit < 0 ? null : points[hit]);
+    };
+  }
+}
+
 function drawEmpty(ctx, w, h) {
   ctx.fillStyle = cssVar('--muted', '#999');
   ctx.font = '13px system-ui, sans-serif';
