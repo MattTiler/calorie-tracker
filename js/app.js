@@ -5,7 +5,7 @@ import { OFF } from './off.js';
 
 // Shown in Settings so you can confirm which deployed build the device is running.
 // Bump this together with the cache version in sw.js on every deploy.
-const APP_VERSION = 'v34';
+const APP_VERSION = 'v35';
 
 // ---------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -789,31 +789,60 @@ function ingredientGrams(food) {
 }
 
 // ================================================================ TRENDS
-// Weight chart time windows. `days: null` = show everything. Wide views resample
-// to evenly-spaced points so dense clusters of weigh-ins don't overlap.
+// Weight chart time windows. `days: null` = everything.
+// mode 'daily' = one point per day (gaps interpolated); 'sample' = N even points.
+// dots: 'real' = mark only real weigh-ins; false = none.
 const WEIGHT_RANGES = [
-  { key: '1M', days: 30, resample: false },
-  { key: '3M', days: 90, resample: false },
-  { key: '1Y', days: 365, resample: true },
-  { key: 'All', days: null, resample: true },
+  { key: '1M', days: 30, mode: 'daily', dots: 'real' },
+  { key: '3M', days: 90, mode: 'daily', dots: false },
+  { key: '1Y', days: 365, mode: 'sample', dots: false },
+  { key: 'All', days: null, mode: 'sample', dots: false },
 ];
 let weightRange = '1M';
 
-// Resample a time-sorted [{t, value}] series to `n` evenly-spaced points across
-// its span, reading intermediate values off the line between actual weigh-ins.
+// Value on the weigh-in line at time `td`: interpolate between the surrounding
+// weigh-ins; hold flat after the last; null before the first (sorted asc by t).
+function interpAt(points, td) {
+  if (td <= points[0].t) return td === points[0].t ? points[0].value : null;
+  const last = points[points.length - 1];
+  if (td >= last.t) return last.value;
+  let i = 0;
+  while (i < points.length - 1 && points[i + 1].t <= td) i++;
+  const a = points[i], b = points[i + 1];
+  return a.value + (b.value - a.value) * ((td - a.t) / (b.t - a.t));
+}
+
+// One point per day across the last `windowDays` (clamped to start at the first
+// weigh-in). Real weigh-in days are flagged so only they get dots.
+function fillDaily(points, windowDays) {
+  if (!points.length) return [];
+  const today = todayStr();
+  const firstDate = toISO(new Date(points[0].t));
+  const windowStart = addDays(today, -(windowDays - 1));
+  const realDates = new Set(points.map(p => toISO(new Date(p.t))));
+  const out = [];
+  for (let d = windowStart > firstDate ? windowStart : firstDate; d <= today; d = addDays(d, 1)) {
+    const value = interpAt(points, parseISO(d).getTime());
+    if (value == null) continue;
+    out.push({
+      t: parseISO(d).getTime(), value,
+      label: parseISO(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+      real: realDates.has(d),
+    });
+  }
+  return out;
+}
+
+// Resample a time-sorted [{t, value}] series to `n` evenly-spaced points.
 function resampleByTime(points, n) {
   const t0 = points[0].t, t1 = points[points.length - 1].t;
   if (t1 === t0) return points;
   const out = [];
-  let j = 0;
   for (let i = 0; i < n; i++) {
     const t = t0 + (t1 - t0) * (i / (n - 1));
-    while (j < points.length - 2 && points[j + 1].t <= t) j++;
-    const a = points[j], b = points[j + 1];
-    const frac = b.t === a.t ? 0 : (t - a.t) / (b.t - a.t);
     out.push({
       t,
-      value: a.value + (b.value - a.value) * frac,
+      value: interpAt(points, t),
       label: new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
     });
   }
@@ -866,11 +895,21 @@ async function renderTrends() {
 
   const drawWeight = () => {
     const r = WEIGHT_RANGES.find(x => x.key === weightRange) || WEIGHT_RANGES[0];
-    const cutoff = r.days == null ? -Infinity : parseISO(addDays(todayStr(), -r.days)).getTime();
-    let pts = wPoints.filter(p => p.t >= cutoff);
-    // Wide views: even out clustered weigh-ins into a clean 30-point trend line.
-    if (r.resample && pts.length >= 3) pts = resampleByTime(pts, 30);
-    lineChart($('#weight-chart'), pts, { dots: !r.resample });
+    let pts, dots = r.dots;
+    if (r.mode === 'daily') {
+      pts = fillDaily(wPoints, r.days); // uses all weigh-ins as anchors, even before the window
+    } else {
+      const cutoff = r.days == null ? -Infinity : parseISO(addDays(todayStr(), -r.days)).getTime();
+      const inRange = wPoints.filter(p => p.t >= cutoff);
+      if (inRange.length >= 3) {
+        // As many even points as the screen can show (~1 per 4px), for a smooth line.
+        const cw = $('#weight-chart').getBoundingClientRect().width || 320;
+        pts = resampleByTime(inRange, Math.min(200, Math.max(30, Math.round((cw - 52) / 4))));
+      } else {
+        pts = inRange; dots = true; // too few to resample — just show the points
+      }
+    }
+    lineChart($('#weight-chart'), pts, { dots });
   };
   drawWeight();
   $$('#weight-ranges .chip', view).forEach(b => b.onclick = () => {
